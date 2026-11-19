@@ -17,6 +17,7 @@ Benutzer:innen landen direkt auf der Anmeldeseite, melden sich mit einer der ang
 | [05-open-questions.md](05-open-questions.md) | Offene Fragen und Klärungsbedarf |
 | [06-hosting-and-data.md](06-hosting-and-data.md) | Azure-Hosting, Datenhaltung, Kosten |
 | [07-app-registrations.md](07-app-registrations.md) | Checkliste App-Registrierungen pro Anbieter |
+| [08-deployment.md](08-deployment.md) | Deployment mit Bicep: Ressourcen, Ablauf, Custom Domain |
 
 ## Tech-Stack (Kurzfassung)
 

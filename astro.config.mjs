@@ -11,6 +11,12 @@ export default defineConfig({
   security: {
     // Schützt POST-Formulare (Logout, Trennen) gegen Cross-Site-Requests.
     checkOrigin: true,
+    // Hinter dem Ingress von Container Apps: X-Forwarded-Host/-Proto nur für diese Hosts vertrauen,
+    // damit Astro.url (und die Origin-Prüfung) die öffentliche HTTPS-URL verwendet.
+    allowedDomains: [
+      { hostname: 'login-example.campus.cloud', protocol: 'https' },
+      { hostname: '**.azurecontainerapps.io', protocol: 'https' },
+    ],
   },
   session: {
     // Azure SQL (dbo.sessions); ohne Datenbank-Konfiguration In-Memory. Siehe src/lib/session-driver.ts

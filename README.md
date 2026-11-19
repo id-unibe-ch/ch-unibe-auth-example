@@ -70,6 +70,10 @@ docker build -t unibe-login-example .
 docker run --rm -p 4321:4321 --env-file .env unibe-login-example
 ```
 
+## Deployment (Azure)
+
+Bicep-Vorlage in `infra/`, Ablauf in [`docs/08-deployment.md`](docs/08-deployment.md).
+
 ## Projektstruktur
 
 ```
@@ -86,6 +90,7 @@ src/
   pages/auth/…       Login, Callback, Logout
   pages/account/…    Account trennen, Konto löschen
 db/migrations/       SQL-Schema (npm run db:migrate)
+infra/               Bicep-Vorlage, Parameter, SQL-Rechte für die Managed Identities
 ```
 
 ## Stand
@@ -94,4 +99,5 @@ db/migrations/       SQL-Schema (npm run db:migrate)
 - [x] Azure SQL (Benutzer, Identitäten, Sessions)
 - [ ] App-Registrierungen bei den Providern (Entra UniBE, Microsoft, External ID erledigt)
 - [ ] Passkeys (WebAuthn)
-- [ ] Infrastruktur (Container Apps, SQL, Key Vault) und CI/CD
+- [x] Infrastruktur als Bicep (Container Apps, SQL, Key Vault)
+- [ ] CI/CD

@@ -12,7 +12,7 @@
 | 8 | Datenschutz | Welche Claims dürfen gespeichert werden; Aufbewahrungsdauer; automatische Löschung inaktiver Demo-Konten (z. B. nach 90 Tagen); Datenschutzhinweis auf der Seite. | – | offen |
 | 9 | Zielgruppe | Ist die Seite öffentlich (jede:r kann sich anmelden) oder nur intern erreichbar? | – | offen |
 | 10 | Sprache | Nur Deutsch oder auch Englisch (i18n)? | – | offen |
-| 11 | Betrieb | Infrastructure as Code (Bicep vs. Terraform)? CI/CD über GitHub Actions mit OIDC-Federation nach Azure? | – | offen |
+| 11 | Betrieb | CI/CD über GitHub Actions mit OIDC-Federation nach Azure (Image bauen, Bicep deployen, Migrations-Job starten)? Registry: öffentliches oder privates GHCR-Paket? | – | offen |
 | 12 | Apple/Meta | Wer könnte einen Apple-Developer- bzw. Meta-Business-Account für die UniBE beantragen, falls diese Methoden später gezeigt werden sollen? | – | offen |
 
 ## Erledigt
@@ -30,3 +30,4 @@
 | Domain | `login-example.campus.cloud` ([ADR-013](02-decisions.md)) |
 | Hosting/Kosten | Container Apps immer an + Azure SQL Basic, ca. CHF 10/Monat ([ADR-011](02-decisions.md)) |
 | Datenzugriff | `mssql` mit SQL-Migrationen, ohne ORM ([ADR-014](02-decisions.md)) |
+| Infrastructure as Code | Bicep ([08](08-deployment.md)) |
