@@ -1,0 +1,24 @@
+import type { APIRoute } from 'astro';
+import { startAuthorization } from '../../../lib/auth';
+import { getProvider, isEnabled } from '../../../lib/providers';
+
+/** Starts a sign-in (?intent=login) or a link (?intent=link) at a provider. */
+export const GET: APIRoute = async ({ params, url, locals, session, redirect }) => {
+  const provider = getProvider(params.provider);
+  if (!provider || !isEnabled(provider)) {
+    return new Response('Unknown or unconfigured provider', { status: 404 });
+  }
+
+  const intent = url.searchParams.get('intent') === 'link' ? 'link' : 'login';
+  if (intent === 'link' && !locals.user) return redirect('/');
+
+  try {
+    const { url: target, tx } = await startAuthorization(provider, intent);
+    session?.set('authTx', tx);
+    return redirect(target.href);
+  } catch (err) {
+    console.error(`[auth] starting ${provider.id} failed`, err);
+    session?.set('flash', { kind: 'error', key: 'flash.startFailed', params: { provider: provider.label } });
+    return redirect(intent === 'link' ? '/profile' : '/');
+  }
+};

@@ -1,0 +1,109 @@
+name: Deploy
+
+# Builds the container image, publishes it to GHCR, migrates the database and rolls out the new version.
+# Runs on every push to main. Without the Azure variables configured, only the image is built.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'infra/**'
+      - '.github/workflows/infra.yml'
+      - '.github/workflows/secrets.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+  APP_NAME: ca-authex
+  JOB_NAME: caj-authex-migrate
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ env.IMAGE }}:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: image
+    if: vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # OIDC federation, no Azure secret in GitHub
+      contents: read
+    env:
+      RG: ${{ vars.RESOURCE_GROUP }}
+      NEW_IMAGE: ${{ needs.image.outputs.image }}
+    steps:
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.ENTRA_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Check whether the app exists
+        id: exists
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
+          if az containerapp show -g "$RG" -n "$APP_NAME" -o none 2>/dev/null; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Container App $APP_NAME does not exist yet – only the image was built. Run infra.yml with deploy_app first (docs/08-deployment.md)."
+            echo "app=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Migrate the database
+        if: steps.exists.outputs.app == 'true'
+        # The schema first, then the app: a new version may rely on a new schema.
+        run: |
+          set -euo pipefail
+          az containerapp job update -g "$RG" -n "$JOB_NAME" --image "$NEW_IMAGE" --only-show-errors -o none
+          execution=$(az containerapp job start -g "$RG" -n "$JOB_NAME" --query name -o tsv)
+          echo "Execution: $execution"
+          for i in $(seq 1 60); do
+            status=$(az containerapp job execution show -g "$RG" -n "$JOB_NAME" --job-execution-name "$execution" --query properties.status -o tsv)
+            echo "Status: $status"
+            case "$status" in
+              Succeeded) exit 0 ;;
+              Failed|Stopped|Degraded) echo "::error::Migration failed ($status) – see the job's execution history for logs"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Migration not finished after 10 minutes"; exit 1
+
+      - name: Update the app
+        if: steps.exists.outputs.app == 'true'
+        run: |
+          az containerapp update -g "$RG" -n "$APP_NAME" --image "$NEW_IMAGE" --only-show-errors \
+            --query properties.latestRevisionName -o tsv

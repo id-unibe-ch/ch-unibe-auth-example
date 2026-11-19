@@ -1,0 +1,86 @@
+---
+import Icon from './Icon.astro';
+import ProviderLogo from './ProviderLogo.astro';
+import { providerDescription, providerLabel, t } from '../i18n/ui';
+import { isEnabled, type ProviderDefinition } from '../lib/providers';
+
+/**
+ * A provider's sign-in or link button.
+ *   primary – the large emerald button (UniBE on the sign-in page, the recommendation on /choose)
+ *   tile    – logo, name and a one-line description
+ *   compact – logo and name (the profile's "link another account" grid)
+ * A provider that is not configured renders only in development, greyed out.
+ */
+interface Props {
+  provider: ProviderDefinition;
+  variant?: 'primary' | 'tile' | 'compact';
+  intent?: 'login' | 'link';
+  /** Overrides the primary button's main line. */
+  action?: string;
+}
+
+const { provider, variant = 'tile', intent = 'login', action } = Astro.props;
+const { locale } = Astro.locals;
+const enabled = isEnabled(provider);
+const show = enabled || import.meta.env.DEV;
+const href = `/auth/${provider.id}/login${intent === 'link' ? '?intent=link' : ''}`;
+const label = providerLabel(locale, provider);
+const description = providerDescription(locale, provider);
+const mainLine =
+  action ?? (provider.id === 'unibe' ? t(locale, 'provider.unibe.action') : t(locale, 'login.signInWith', { provider: label }));
+const Tag = enabled ? 'a' : 'div';
+---
+
+{
+  show && variant === 'primary' && (
+    <Tag
+      href={enabled ? href : undefined}
+      aria-disabled={enabled ? undefined : 'true'}
+      class:list={[
+        'flex items-center gap-4 rounded-xl px-4 py-3.5 font-semibold no-underline',
+        enabled
+          ? 'bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-emerald-400 dark:text-emerald-950 dark:hover:bg-emerald-300'
+          : 'cursor-not-allowed border border-dashed border-zinc-300 text-zinc-500 dark:border-zinc-700',
+      ]}
+    >
+      <ProviderLogo id={provider.id} size="lg" />
+      <span class="flex flex-1 flex-col leading-snug">
+        <span class:list={[enabled && 'text-white dark:text-emerald-950']}>{mainLine}</span>
+        <span class:list={['text-[13px] font-medium', enabled ? 'text-emerald-50 dark:text-emerald-900' : '']}>
+          {enabled ? description : t(locale, 'login.notConfigured')}
+        </span>
+      </span>
+      {enabled && <Icon name="arrow" class="h-5 w-5 text-white dark:text-emerald-950" />}
+    </Tag>
+  )
+}
+{
+  show && variant !== 'primary' && (
+    <Tag
+      href={enabled ? href : undefined}
+      aria-disabled={enabled ? undefined : 'true'}
+      class:list={[
+        'flex items-center gap-3 rounded-xl border no-underline',
+        variant === 'tile' ? 'min-h-14 px-3 py-2.5' : 'min-h-12 px-3 py-2',
+        enabled
+          ? 'border-zinc-300 bg-white text-zinc-900 hover:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:border-emerald-400'
+          : 'cursor-not-allowed border-dashed border-zinc-300 text-zinc-500 dark:border-zinc-700',
+      ]}
+    >
+      <ProviderLogo id={provider.id} size={variant === 'tile' ? 'md' : 'sm'} />
+      <span class="flex min-w-0 flex-1 flex-col leading-tight">
+        <span class:list={['font-semibold', variant === 'tile' ? 'text-sm' : 'text-sm font-medium']}>{label}</span>
+        {variant === 'tile' && (
+          <span class="text-xs text-zinc-600 dark:text-zinc-400">
+            {enabled ? description : t(locale, 'login.notConfigured')}
+          </span>
+        )}
+      </span>
+      {provider.protocol === 'oauth2' && (
+        <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+          OAuth 2.0
+        </span>
+      )}
+    </Tag>
+  )
+}

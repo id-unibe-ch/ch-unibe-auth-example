@@ -1,0 +1,83 @@
+name: Infrastructure (Bicep)
+
+# infra/main.bicep. Deliberately manual: infrastructure does not change with every commit.
+# Run what-if first and read it. Procedure: docs/08-deployment.md
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'what-if shows the changes without applying them; deploy applies them.'
+        type: choice
+        options: [what-if, deploy]
+        default: what-if
+      deploy_app:
+        description: 'Deploy the Container App and the migration job. Only once the secrets exist in the Key Vault (phase 2).'
+        type: boolean
+        default: true
+      custom_domain_mode:
+        description: 'Custom domain: none → validate (after the DNS records) → bind'
+        type: choice
+        options: [none, validate, bind]
+        default: bind
+
+permissions:
+  id-token: write # OIDC federation, no Azure secret in GitHub
+  contents: read
+
+jobs:
+  infrastructure:
+    runs-on: ubuntu-latest
+    name: ${{ inputs.mode }}
+    if: github.ref == 'refs/heads/main'
+    env:
+      # Read by infra/main.bicepparam.
+      DEPLOY_APP: ${{ inputs.deploy_app }}
+      CUSTOM_DOMAIN_MODE: ${{ inputs.custom_domain_mode }}
+      SQL_ADMIN_GROUP_NAME: ${{ vars.SQL_ADMIN_GROUP_NAME }}
+      SQL_ADMIN_GROUP_OBJECT_ID: ${{ vars.SQL_ADMIN_GROUP_OBJECT_ID }}
+      DEPLOYER_PRINCIPAL_ID: ${{ vars.DEPLOYER_PRINCIPAL_ID }}
+      # A tenant policy keeps service principals from assigning roles. The roles in
+      # infra/main.bicep are created by a person on the first deployment (docs/08-deployment.md).
+      # The workflow identity holds Unibe-Application-Owner (mg-unibe) on the resource group.
+      ASSIGN_ROLES: 'false'
+      RG: ${{ vars.RESOURCE_GROUP }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.ENTRA_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Find the running image
+        # So an infrastructure deployment does not reset the app to "latest" or an older version.
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
+          image=$(az containerapp show -g "$RG" -n ca-authex --query 'properties.template.containers[0].image' -o tsv 2>/dev/null || true)
+          if [ -n "$image" ]; then
+            echo "CONTAINER_IMAGE=$image" >> "$GITHUB_ENV"
+            echo "Running image: $image"
+          else
+            echo "No Container App yet – using the default image from main.bicepparam."
+          fi
+
+      - name: What-if
+        if: inputs.mode == 'what-if'
+        run: |
+          az deployment group what-if \
+            --resource-group "$RG" \
+            --name authex-${{ github.run_number }} \
+            --template-file infra/main.bicep \
+            --parameters infra/main.bicepparam
+
+      - name: Deploy
+        if: inputs.mode == 'deploy'
+        run: |
+          az deployment group create \
+            --resource-group "$RG" \
+            --name authex-${{ github.run_number }} \
+            --template-file infra/main.bicep \
+            --parameters infra/main.bicepparam \
+            --query properties.outputs -o json

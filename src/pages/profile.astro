@@ -1,0 +1,206 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import ProviderButton from '../components/ProviderButton.astro';
+import ProviderLogo from '../components/ProviderLogo.astro';
+import { intlLocale, providerLabel, t } from '../i18n/ui';
+import { getProvider, isEnabled, providers } from '../lib/providers';
+
+const { locale } = Astro.locals;
+const user = Astro.locals.user!;
+const current = await Astro.session?.get('currentIdentity');
+
+const fmt = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'medium', timeStyle: 'short' });
+const fmtDay = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'long' });
+const linkable = providers.filter((p) => p.status === 'available' && (isEnabled(p) || import.meta.env.DEV));
+const initials = (user.displayName ?? '?')
+  .split(/\s+/)
+  .map((w) => w[0])
+  .slice(0, 2)
+  .join('')
+  .toUpperCase();
+
+const isCurrent = (i: { issuer: string; subject: string }) =>
+  current?.issuer === i.issuer && current?.subject === i.subject;
+const currentIdentity = user.identities.find(isCurrent);
+const currentProvider = getProvider(currentIdentity?.provider);
+const single = user.identities.length <= 1;
+const mono = 'font-mono text-xs break-all';
+---
+
+<Base titleKey="profile.title">
+  <section class="mb-9 flex flex-wrap items-center gap-5">
+    <span
+      class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-[22px] font-bold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300"
+      aria-hidden="true">{initials}</span
+    >
+    <div class="flex-[1_1_260px]">
+      <h1 class="text-3xl font-bold tracking-tight">{user.displayName ?? t(locale, 'profile.title')}</h1>
+      <p class="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{t(locale, 'profile.since', { date: fmtDay.format(user.createdAt) })}</p>
+    </div>
+    <p class="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-900">
+      <span class="block text-[22px] font-bold">{user.identities.length}</span>
+      <span class="text-xs text-zinc-600 dark:text-zinc-400">
+        {t(locale, user.identities.length === 1 ? 'profile.stat.account' : 'profile.stat.accounts')}
+      </span>
+    </p>
+  </section>
+
+  <div class="flex flex-wrap items-start gap-6">
+    <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-6">
+      <section aria-labelledby="linked" class="rounded-[20px] border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 id="linked" class="mb-4 text-lg font-semibold">{t(locale, 'profile.linked')}</h2>
+        <ul class="flex flex-col gap-3">
+          {
+            user.identities.map((identity) => {
+              const provider = getProvider(identity.provider);
+              const label = provider ? providerLabel(locale, provider) : identity.provider;
+              const here = isCurrent(identity);
+              const amr = Array.isArray(identity.claims.amr) ? (identity.claims.amr as string[]) : [];
+              return (
+                <li
+                  class:list={[
+                    'rounded-[14px] border bg-zinc-50 p-4 dark:bg-zinc-950',
+                    here ? 'border-emerald-400 dark:border-emerald-800' : 'border-zinc-200 dark:border-zinc-800',
+                  ]}
+                >
+                  <div class="flex flex-wrap items-center gap-3.5">
+                    <ProviderLogo id={identity.provider} size="lg" />
+                    <div class="min-w-0 flex-[1_1_220px]">
+                      <p class="flex flex-wrap items-center gap-2 font-semibold">
+                        {label}
+                        {here && (
+                          <span class="rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            {t(locale, 'profile.current')}
+                          </span>
+                        )}
+                        {provider?.protocol === 'oauth2' && (
+                          <span class="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                            OAuth 2.0
+                          </span>
+                        )}
+                      </p>
+                      <p class="text-sm break-all text-zinc-700 dark:text-zinc-300">
+                        {identity.email ?? identity.subject}
+                        {identity.email && identity.emailVerified === true && (
+                          <span class="ml-1 text-xs text-emerald-700 dark:text-emerald-300">✓ {t(locale, 'profile.verified')}</span>
+                        )}
+                        {identity.email && identity.emailVerified === false && (
+                          <span class="ml-1 text-xs text-amber-700 dark:text-amber-300">{t(locale, 'profile.unverified')}</span>
+                        )}
+                      </p>
+                      <p class="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+                        {t(locale, 'profile.linkedAt', { date: fmt.format(identity.linkedAt) })} ·{' '}
+                        {t(locale, 'profile.lastLogin', { date: fmt.format(identity.lastLoginAt) })}
+                      </p>
+                    </div>
+                    <form method="post" action="/account/unlink">
+                      <input type="hidden" name="identityId" value={identity.id} />
+                      <button
+                        type="submit"
+                        disabled={single}
+                        title={single ? t(locale, 'profile.unlinkLast') : undefined}
+                        class="min-h-10 cursor-pointer rounded-[9px] border border-zinc-300 px-3.5 text-sm text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                      >
+                        {t(locale, 'profile.unlink')}
+                      </button>
+                    </form>
+                  </div>
+                  <details open={here} class="mt-3.5 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                    <summary class="cursor-pointer text-[13px] text-zinc-700 dark:text-zinc-300">{t(locale, 'profile.details')}</summary>
+                    <dl class="mt-3 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-[13px]">
+                      <dt class="text-zinc-600 dark:text-zinc-400">{t(locale, 'profile.protocol')}</dt>
+                      <dd>{t(locale, provider?.protocol === 'oauth2' ? 'protocol.oauth2' : 'protocol.oidc')}</dd>
+                      <dt class="text-zinc-600 dark:text-zinc-400">{t(locale, 'profile.path')}</dt>
+                      <dd>{t(locale, provider?.group === 'broker' ? 'profile.path.broker' : 'profile.path.direct')}</dd>
+                      <dt class="text-zinc-600 dark:text-zinc-400">{t(locale, 'profile.issuer')}</dt>
+                      <dd class={mono}>{identity.issuer}</dd>
+                      <dt class="text-zinc-600 dark:text-zinc-400">{t(locale, 'profile.subject')}</dt>
+                      <dd class={mono}>{identity.subject}</dd>
+                      {amr.length > 0 && (
+                        <>
+                          <dt class="text-zinc-600 dark:text-zinc-400">{t(locale, 'profile.method')}</dt>
+                          <dd class="flex flex-wrap gap-1.5">
+                            {amr.map((m) => (
+                              <span class="rounded-md bg-zinc-200 px-2 text-xs dark:bg-zinc-800">{m}</span>
+                            ))}
+                          </dd>
+                        </>
+                      )}
+                    </dl>
+                    <p class="mt-3 mb-1.5 text-xs text-zinc-600 dark:text-zinc-400">{t(locale, 'profile.claims')}</p>
+                    <pre class="overflow-x-auto rounded-[10px] border border-zinc-200 bg-zinc-900 p-3.5 font-mono text-xs text-emerald-200 dark:border-zinc-800 dark:bg-black">{JSON.stringify(identity.claims, null, 2)}</pre>
+                  </details>
+                </li>
+              );
+            })
+          }
+        </ul>
+      </section>
+
+      <section aria-labelledby="connect" class="rounded-[20px] border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 id="connect" class="mb-1 text-lg font-semibold">{t(locale, 'profile.connect')}</h2>
+        <p class="mb-4 text-sm text-zinc-600 dark:text-zinc-400">{t(locale, 'profile.connectText')}</p>
+        {
+          linkable.length > 0 ? (
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2.5">
+              {linkable.map((p) => (
+                <ProviderButton provider={p} variant="compact" intent="link" />
+              ))}
+            </div>
+          ) : (
+            <p class="text-sm text-zinc-600 dark:text-zinc-400">{t(locale, 'profile.connectNone')}</p>
+          )
+        }
+      </section>
+
+      <section aria-labelledby="passkeys" class="rounded-[20px] border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 id="passkeys" class="mb-3 text-lg font-semibold">{t(locale, 'profile.passkeys')}</h2>
+        <p class="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+          <span class="flex h-10 w-10 flex-none items-center justify-center rounded-[10px] bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+            <Icon name="key" class="h-5 w-5" />
+          </span>
+          {t(locale, 'profile.passkeysSoon')}
+        </p>
+      </section>
+    </div>
+
+    <aside class="flex min-w-0 flex-[1_1_300px] flex-col gap-6">
+      {
+        currentProvider && (
+          <section aria-labelledby="how" class="rounded-[20px] border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 id="how" class="mb-4 text-base font-semibold">{t(locale, 'profile.how')}</h2>
+            <ol class="flex flex-col gap-3.5 text-[13px]">
+              {[
+                t(locale, 'profile.how.1', { provider: providerLabel(locale, currentProvider) }),
+                t(locale, 'profile.how.2'),
+                t(locale, currentProvider.protocol === 'oauth2' ? 'profile.how.3oauth' : 'profile.how.3oidc'),
+                t(locale, 'profile.how.4'),
+              ].map((step, i) => (
+                <li class="flex gap-3">
+                  <span class="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    {i + 1}
+                  </span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )
+      }
+
+      <section aria-labelledby="danger" class="rounded-[20px] border border-red-200 bg-white p-6 dark:border-red-900 dark:bg-stone-950">
+        <h2 id="danger" class="mb-1 text-base font-semibold text-red-800 dark:text-red-300">{t(locale, 'profile.delete')}</h2>
+        <p class="mb-3.5 text-[13px] text-zinc-600 dark:text-zinc-400">{t(locale, 'profile.deleteText')}</p>
+        <form method="post" action="/account/delete">
+          <button
+            type="submit"
+            class="min-h-11 cursor-pointer rounded-[10px] border border-red-300 px-4 text-sm text-red-800 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+          >
+            {t(locale, 'profile.delete')}
+          </button>
+        </form>
+      </section>
+    </aside>
+  </div>
+</Base>

@@ -1,0 +1,16 @@
+# Local development database (SQL Server 2022, compatible with Azure SQL).
+# Start: docker compose up -d   ·   then: npm run db:migrate -- --create-db
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      # Local use only. Has to match SQL_PASSWORD in .env.
+      MSSQL_SA_PASSWORD: "Dev_Passw0rd!"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+
+volumes:
+  sqldata:

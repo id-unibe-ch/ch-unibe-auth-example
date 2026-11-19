@@ -1,0 +1,113 @@
+---
+import '../styles/global.css';
+import Icon from '../components/Icon.astro';
+import UnibeLogo from '../components/UnibeLogo.astro';
+import { LOCALES, t, type UiKey } from '../i18n/ui';
+
+interface Props {
+  titleKey: UiKey;
+}
+const { titleKey } = Astro.props;
+const { user, locale, theme } = Astro.locals;
+
+const flash = await Astro.session?.get('flash');
+if (flash) Astro.session?.delete('flash');
+
+// Return to the same page after switching language or theme.
+const here = Astro.url.pathname + Astro.url.search;
+const prefsHref = (key: 'lang' | 'theme', value: string) =>
+  `/prefs?${key}=${value}&next=${encodeURIComponent(here)}`;
+const otherTheme = theme === 'dark' ? 'light' : 'dark';
+
+const flashStyles = {
+  success: 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  info: 'border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200',
+  error: 'border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950 dark:text-red-200',
+} as const;
+---
+
+<!doctype html>
+<html lang={locale} class={theme === 'dark' ? 'dark' : undefined}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content={theme} />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>{t(locale, titleKey)} · {t(locale, 'site.name')}</title>
+  </head>
+  <body class="min-h-screen bg-zinc-50 font-sans text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+    <div class="flex min-h-screen flex-col">
+      <header class="border-b border-zinc-200 dark:border-zinc-800">
+        <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <a href="/" class="flex items-center gap-4 text-zinc-900 no-underline dark:text-zinc-100">
+            <UnibeLogo class="h-8 w-auto text-zinc-900 dark:text-white" />
+            <span class="border-l border-zinc-300 pl-4 font-semibold dark:border-zinc-700">{t(locale, 'site.name')}</span>
+            <span class="sr-only">– {t(locale, 'nav.home')}</span>
+          </a>
+          <nav class="flex flex-wrap items-center gap-2" aria-label={t(locale, 'nav.language')}>
+            <div class="flex rounded-[9px] border border-zinc-300 p-[3px] dark:border-zinc-700">
+              {
+                LOCALES.map((l) => (
+                  <a
+                    href={prefsHref('lang', l)}
+                    hreflang={l}
+                    aria-current={l === locale ? 'true' : undefined}
+                    class:list={[
+                      'flex h-[34px] min-w-11 items-center justify-center rounded-md text-[13px] uppercase no-underline',
+                      l === locale
+                        ? 'bg-zinc-200 font-semibold text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
+                        : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100',
+                    ]}
+                  >
+                    {l}
+                  </a>
+                ))
+              }
+            </div>
+            <a
+              href={prefsHref('theme', otherTheme)}
+              class="flex h-11 w-11 items-center justify-center rounded-[9px] border border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            >
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} class="h-[18px] w-[18px]" />
+              <span class="sr-only">{t(locale, theme === 'dark' ? 'nav.themeLight' : 'nav.themeDark')}</span>
+            </a>
+            {
+              user && (
+                <form method="post" action="/auth/logout">
+                  <button
+                    type="submit"
+                    class="h-11 cursor-pointer rounded-[9px] border border-zinc-300 px-4 text-sm text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                  >
+                    {t(locale, 'nav.signOut')}
+                  </button>
+                </form>
+              )
+            }
+          </nav>
+        </div>
+      </header>
+
+      <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+        {
+          flash && (
+            <div role="status" class:list={['mb-8 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm', flashStyles[flash.kind]]}>
+              {flash.kind === 'success' && <Icon name="check" class="h-[18px] w-[18px] flex-none" />}
+              {flash.kind !== 'success' && <Icon name="info" class="h-[18px] w-[18px] flex-none" />}
+              {t(locale, flash.key, flash.params)}
+            </div>
+          )
+        }
+        <slot />
+      </main>
+
+      <footer class="border-t border-zinc-200 dark:border-zinc-800">
+        <div class="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 px-4 py-5 text-[13px] text-zinc-600 sm:px-6 dark:text-zinc-400">
+          <span>{t(locale, 'site.footer')}</span>
+          <span class="flex gap-4">
+            <a href="https://github.com/id-unibe-ch/ch-unibe-auth-example">{t(locale, 'site.source')}</a>
+          </span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
