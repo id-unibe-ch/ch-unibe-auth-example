@@ -2,6 +2,14 @@
 import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
 import tailwindcss from '@tailwindcss/vite';
+import { existsSync, readFileSync } from 'node:fs';
+
+// Local HTTPS for the dev server: active when a certificate exists in .certs/ (see README,
+// "HTTPS locally"). Needed for providers that accept https redirect URIs only, e.g. SWITCH.
+const devCert = '.certs/localhost.pem';
+const devKey = '.certs/localhost-key.pem';
+const devHttps =
+  existsSync(devCert) && existsSync(devKey) ? { cert: readFileSync(devCert), key: readFileSync(devKey) } : undefined;
 
 export default defineConfig({
   output: 'server',
@@ -25,5 +33,6 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    server: { https: devHttps },
   },
 });

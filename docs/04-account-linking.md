@@ -51,7 +51,7 @@ erDiagram
 
 Uniqueness: `UNIQUE(issuer, subject)` on IDENTITY, `UNIQUE(credential_id)` on PASSKEY.
 
-Implementation: `db/migrations/001_initial.sql` (USER, IDENTITY, SESSION); PASSKEY follows with the passkeys. Deleting a user deletes its identities through `ON DELETE CASCADE`.
+Implementation: `db/migrations/001_initial.sql` (USER, IDENTITY, SESSION) and `002_passkeys.sql` (PASSKEY). Deleting a user deletes its identities through `ON DELETE CASCADE`.
 
 `claims` holds only the claims the demo needs (data minimisation, see the open questions).
 
@@ -96,7 +96,7 @@ sequenceDiagram
 
 ### Unlinking an account
 
-- Allowed as long as at least **one way to sign in** (identity or passkey) remains. The SQL statement checks this atomically.
+- Allowed as long as at least **one way to sign in** (identity or passkey) remains. The SQL statement counts both and checks this atomically; the same rule applies to deleting a passkey.
 - Planned: re-authentication when the last sign-in is more than about ten minutes ago (`lastAuthAt` in the session).
 
 ### Deleting the account
@@ -107,11 +107,15 @@ sequenceDiagram
 
 ### The app's own passkeys (WebAuthn)
 
-- **Registration:** only for signed-in users, in the profile ("Add passkey"). A passkey is therefore always bound to an existing account.
-- **Sign-in:** a "Sign in with passkey" button on the sign-in page, discoverable credentials (resident keys) and conditional UI (autofill), `userVerification: required`.
-- **RP id:** `login-example.campus.cloud` – passkeys are bound to this domain; test environments (e.g. `localhost`) need passkeys of their own.
-- **Library:** `@simplewebauthn/server` and `@simplewebauthn/browser`.
-- **Management:** list, rename and delete passkeys in the profile.
+- **Registration:** only for signed-in users, in the profile ("Add a passkey", with an optional name). A passkey is therefore always bound to an existing account. `excludeCredentials` keeps an authenticator from registering twice.
+- **Sign-in:** a "Sign in with a passkey" button on the sign-in page. Discoverable credentials (`residentKey: required`), so no user name is needed; `userVerification: required`. The credential id identifies the passkey and thereby the account; the user handle is the account id.
+- **No conditional UI (autofill):** it needs a user-name field, which the sign-in page does not have.
+- **RP id:** the host of `APP_BASE_URL` – `login-example.campus.cloud` in production, `localhost` in development. Passkeys are bound to it; every environment needs passkeys of its own, and passkeys created on the `*.azurecontainerapps.io` host stop working once the custom domain is bound.
+- **Stored:** credential id, public key (COSE), signature counter, transports, device type (`multiDevice` = synced), backup state, name, created and last used.
+- **Flow:** `POST /passkey/register/options` → `navigator.credentials.create()` → `POST /passkey/register/verify`; `POST /passkey/login/options` → `navigator.credentials.get()` → `POST /passkey/login/verify`. The challenge lives in the session for five minutes and is used once.
+- **CSRF:** the endpoints accept JSON only. A cross-site page cannot send a JSON POST without a CORS preflight, which the app never answers; WebAuthn binds the response to the origin anyway.
+- **Library:** `@simplewebauthn/server` and `@simplewebauthn/browser` (v14).
+- **Management:** list, rename and delete passkeys in the profile; the passkey used for the current sign-in is marked.
 
 ### Passkeys at the IdPs
 

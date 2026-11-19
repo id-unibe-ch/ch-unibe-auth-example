@@ -236,7 +236,10 @@ export const providers: ProviderDefinition[] = [
     envPrefix: 'GITHUB',
     scope: 'read:user user:email',
     oauth2: {
-      issuer: 'https://github.com',
+      // GitHub sends iss=https://github.com/login/oauth in the callback (RFC 9207, since April 2026),
+      // and openid-client checks it against this value. The stored identity keeps the issuer
+      // https://github.com (fetchGitHubProfile), so existing links stay valid.
+      issuer: 'https://github.com/login/oauth',
       authorizationEndpoint: 'https://github.com/login/oauth/authorize',
       tokenEndpoint: 'https://github.com/login/oauth/access_token',
       fetchProfile: fetchGitHubProfile,

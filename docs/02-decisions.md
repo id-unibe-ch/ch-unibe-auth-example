@@ -63,7 +63,7 @@ When a decision changes, add a new entry and mark the superseded one rather than
 
 ## ADR-009: Passkeys – the app's own and through the IdPs
 
-- **Status:** accepted (details in [04](04-account-linking.md#passkeys))
+- **Status:** accepted, the app's own passkeys implemented (details in [04](04-account-linking.md#passkeys))
 - **Decision:** Passkeys are shown on two levels:
   1. **The app's own (WebAuthn, SimpleWebAuthn):** users can register passkeys in their profile and then sign in with a passkey directly.
   2. **On the IdP's side:** passkey sign-in at Entra (UniBE tenant), External ID and others. The app sees only the `amr`/`acr` claims and shows them.

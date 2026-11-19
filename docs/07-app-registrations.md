@@ -7,7 +7,7 @@ One registration per provider. The redirect URI always has the form:
 ```
 
 - **Production:** `https://login-example.campus.cloud`
-- **Development:** `http://localhost:4321`
+- **Development:** `http://localhost:4321`, or `https://localhost:4321` with a local certificate (README, "HTTPS locally") – required by providers that accept HTTPS redirect URIs only, such as SWITCH and ORCID
 
 Client id and secret go into the environment variables (locally `.env`, in production Key Vault via [`secrets.yml`](08-deployment.md)), see `.env.example`.
 
@@ -76,7 +76,7 @@ Client id and secret go into the environment variables (locally `.env`, in produ
 - [ ] Create a resource in the SWITCH Resource Registry or extend the existing OIDC connection ([open question 3](05-open-questions.md))
 - [ ] Redirect URIs:
   - [ ] `https://login-example.campus.cloud/auth/switch/callback`
-  - [ ] `http://localhost:4321/auth/switch/callback` (if SWITCH allows it; otherwise a separate test resource)
+  - [ ] `https://localhost:4321/auth/switch/callback` (SWITCH accepts HTTPS only – run the dev server with HTTPS)
 - [ ] Keys and Secrets: credential type **Shared client secret**, token endpoint method **Client Secret Post** (the app sends the secret in the POST body, `openid-client`'s default)
 - [ ] Request attribute releases (e.g. name, email, `swissEduPersonUniqueID`, affiliation)
 - [ ] Take over client id and secret

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { getPool, isUniqueViolation, sql } from './db';
 import type { ProviderProfile } from './providers';
-import type { Identity, LinkResult, UnlinkResult, User, UserStore } from './store';
+import type { Identity, LinkResult, NewPasskey, Passkey, UnlinkResult, User, UserStore } from './store';
 
 interface IdentityRow {
   id: string;
@@ -30,6 +30,60 @@ function toIdentity(r: IdentityRow): Identity {
   };
 }
 
+interface PasskeyRow {
+  id: string;
+  user_id: string;
+  credential_id: string;
+  public_key: Buffer;
+  sign_count: number | string;
+  transports: string | null;
+  device_type: string;
+  backed_up: boolean;
+  name: string;
+  created_at: Date;
+  last_used_at: Date | null;
+}
+
+function toPasskey(r: PasskeyRow): Passkey {
+  return {
+    id: r.id.toLowerCase(),
+    credentialId: r.credential_id,
+    publicKey: new Uint8Array(r.public_key),
+    counter: Number(r.sign_count),
+    transports: r.transports ? r.transports.split(',') : [],
+    deviceType: r.device_type === 'multiDevice' ? 'multiDevice' : 'singleDevice',
+    backedUp: r.backed_up,
+    name: r.name,
+    createdAt: r.created_at,
+    lastUsedAt: r.last_used_at ?? undefined,
+  };
+}
+
+/**
+ * Removes an identity or a passkey atomically, but only if the account keeps at least one
+ * way to sign in. The table name is one of two constants, never user input.
+ */
+async function removeSignInMethod(table: 'identities' | 'passkeys', userId: string, id: string): Promise<UnlinkResult> {
+  const pool = await getPool();
+  const res = await pool
+    .request()
+    .input('user_id', sql.UniqueIdentifier, userId)
+    .input('id', sql.UniqueIdentifier, id)
+    .query<{ result: UnlinkResult }>(
+      `IF NOT EXISTS (SELECT 1 FROM dbo.${table} WHERE id = @id AND user_id = @user_id)
+         SELECT 'not-found' AS result;
+       ELSE
+       BEGIN
+         DELETE FROM dbo.${table}
+          WHERE id = @id AND user_id = @user_id
+            AND (SELECT COUNT(*) FROM dbo.identities WITH (UPDLOCK, HOLDLOCK) WHERE user_id = @user_id)
+              + (SELECT COUNT(*) FROM dbo.passkeys WITH (UPDLOCK, HOLDLOCK) WHERE user_id = @user_id) > 1;
+         SELECT CASE WHEN @@ROWCOUNT = 1 THEN 'unlinked' ELSE 'last-identity' END AS result;
+       END`,
+    );
+  return res.recordset[0]!.result;
+}
+
 /** Binds the parameters of a new identity to a request. */
 function bindIdentity(req: sql.Request, userId: string, provider: string, p: ProviderProfile) {
   return req
@@ -55,11 +109,13 @@ export class SqlUserStore implements UserStore {
       .input('id', sql.UniqueIdentifier, userId)
       .query<{ id: string; display_name: string | null; created_at: Date }>(
         `SELECT id, display_name, created_at FROM dbo.users WHERE id = @id;
-         SELECT * FROM dbo.identities WHERE user_id = @id ORDER BY linked_at;`,
+         SELECT * FROM dbo.identities WHERE user_id = @id ORDER BY linked_at;
+         SELECT * FROM dbo.passkeys WHERE user_id = @id ORDER BY created_at;`,
       );
     const recordsets = res.recordsets as unknown as [
       { id: string; display_name: string | null; created_at: Date }[],
       IdentityRow[],
+      PasskeyRow[],
     ];
     const u = recordsets[0][0];
     if (!u) return undefined;
@@ -68,6 +124,7 @@ export class SqlUserStore implements UserStore {
       displayName: u.display_name ?? undefined,
       createdAt: u.created_at,
       identities: recordsets[1].map(toIdentity),
+      passkeys: recordsets[2].map(toPasskey),
     };
   }
 
@@ -140,30 +197,72 @@ export class SqlUserStore implements UserStore {
   }
 
   async unlinkIdentity(userId: string, identityId: string): Promise<UnlinkResult> {
-    const pool = await getPool();
-    // Atomic: delete only if at least one identity remains afterwards.
-    // Later also count passkeys.
-    const res = await pool
-      .request()
-      .input('user_id', sql.UniqueIdentifier, userId)
-      .input('id', sql.UniqueIdentifier, identityId)
-      .query<{ result: UnlinkResult }>(
-        `IF NOT EXISTS (SELECT 1 FROM dbo.identities WHERE id = @id AND user_id = @user_id)
-           SELECT 'not-found' AS result;
-         ELSE
-         BEGIN
-           DELETE FROM dbo.identities
-            WHERE id = @id AND user_id = @user_id
-              AND (SELECT COUNT(*) FROM dbo.identities WITH (UPDLOCK, HOLDLOCK) WHERE user_id = @user_id) > 1;
-           SELECT CASE WHEN @@ROWCOUNT = 1 THEN 'unlinked' ELSE 'last-identity' END AS result;
-         END`,
-      );
-    return res.recordset[0]!.result;
+    return removeSignInMethod('identities', userId, identityId);
   }
 
   async deleteUser(userId: string) {
     const pool = await getPool();
-    // Identities go with it through ON DELETE CASCADE.
+    // Identities and passkeys go with it through ON DELETE CASCADE.
     await pool.request().input('id', sql.UniqueIdentifier, userId).query('DELETE FROM dbo.users WHERE id = @id');
+  }
+
+  async findPasskey(credentialId: string) {
+    const pool = await getPool();
+    const res = await pool
+      .request()
+      .input('credential_id', sql.NVarChar(512), credentialId)
+      .query<PasskeyRow>('SELECT * FROM dbo.passkeys WHERE credential_id = @credential_id');
+    const row = res.recordset[0];
+    return row ? { userId: row.user_id.toLowerCase(), passkey: toPasskey(row) } : undefined;
+  }
+
+  async addPasskey(userId: string, p: NewPasskey): Promise<Passkey> {
+    const pool = await getPool();
+    const id = randomUUID();
+    const res = await pool
+      .request()
+      .input('id', sql.UniqueIdentifier, id)
+      .input('user_id', sql.UniqueIdentifier, userId)
+      .input('credential_id', sql.NVarChar(512), p.credentialId)
+      .input('public_key', sql.VarBinary(sql.MAX), Buffer.from(p.publicKey))
+      .input('sign_count', sql.BigInt, p.counter)
+      .input('transports', sql.NVarChar(200), p.transports.join(',') || null)
+      .input('device_type', sql.NVarChar(32), p.deviceType)
+      .input('backed_up', sql.Bit, p.backedUp)
+      .input('name', sql.NVarChar(100), p.name.slice(0, 100))
+      .query<PasskeyRow>(
+        `INSERT INTO dbo.passkeys (id, user_id, credential_id, public_key, sign_count, transports, device_type, backed_up, name)
+         OUTPUT INSERTED.*
+         VALUES (@id, @user_id, @credential_id, @public_key, @sign_count, @transports, @device_type, @backed_up, @name)`,
+      );
+    return toPasskey(res.recordset[0]!);
+  }
+
+  async recordPasskeyUse(passkeyId: string, counter: number, backedUp: boolean) {
+    const pool = await getPool();
+    await pool
+      .request()
+      .input('id', sql.UniqueIdentifier, passkeyId)
+      .input('sign_count', sql.BigInt, counter)
+      .input('backed_up', sql.Bit, backedUp)
+      .query(
+        `UPDATE dbo.passkeys SET sign_count = @sign_count, backed_up = @backed_up, last_used_at = SYSUTCDATETIME()
+          WHERE id = @id`,
+      );
+  }
+
+  async renamePasskey(userId: string, passkeyId: string, name: string) {
+    const pool = await getPool();
+    const res = await pool
+      .request()
+      .input('id', sql.UniqueIdentifier, passkeyId)
+      .input('user_id', sql.UniqueIdentifier, userId)
+      .input('name', sql.NVarChar(100), name.slice(0, 100))
+      .query('UPDATE dbo.passkeys SET name = @name WHERE id = @id AND user_id = @user_id');
+    return res.rowsAffected[0] === 1;
+  }
+
+  async deletePasskey(userId: string, passkeyId: string): Promise<UnlinkResult> {
+    return removeSignInMethod('passkeys', userId, passkeyId);
   }
 }

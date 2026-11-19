@@ -14,7 +14,7 @@
 | 8 | Apple | Public | OIDC | direct + broker | `iss` + `sub` | **deferred** (no Apple Developer account) |
 | 9 | GitHub | Developers | **OAuth 2.0** | direct | numeric `id` | implemented, registration pending |
 | 10 | Meta (Facebook) | Public | **OAuth 2.0** (direct) / OIDC via broker | direct + broker | app-scoped `id` | **deferred** (no Meta Business account) |
-| 11 | Passkey (the app's own) | All signed-in users | WebAuthn | the app's own | credential id | planned |
+| 11 | Passkey (the app's own) | All signed-in users | WebAuthn | the app's own | credential id | implemented |
 
 > **Identity key:** what is stored is always the pair (issuer, subject). For Entra the subject is `oid` and the issuer the tenant-specific issuer URL. Signing in with the same UniBE account through the UniBE button and the Microsoft button therefore leads to the same identity. Entra's `sub`, by contrast, is pairwise per app and less suitable as a key across apps.
 
