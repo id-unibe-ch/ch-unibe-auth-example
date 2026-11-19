@@ -1,21 +1,28 @@
 import type { APIRoute } from 'astro';
+import type { UiKey } from '../../../i18n/ui';
 import { completeAuthorization, TX_MAX_AGE_MS } from '../../../lib/auth';
 import { getProvider } from '../../../lib/providers';
-import { store } from '../../../lib/store';
+import { store, type LinkResult } from '../../../lib/store';
+
+const LINK_MESSAGES: Record<LinkResult, { kind: 'success' | 'info' | 'error'; key: UiKey }> = {
+  linked: { kind: 'success', key: 'flash.linked' },
+  'already-linked': { kind: 'info', key: 'flash.alreadyLinked' },
+  conflict: { kind: 'error', key: 'flash.conflict' },
+};
 
 export const GET: APIRoute = async ({ params, url, locals, session, redirect }) => {
   const provider = getProvider(params.provider);
   const tx = await session?.get('authTx');
   session?.delete('authTx');
 
-  const fail = (message: string, to = '/') => {
-    session?.set('flash', { kind: 'error', message });
+  const fail = (key: UiKey, to = '/') => {
+    session?.set('flash', { kind: 'error', key, params: { provider: provider?.label ?? '' } });
     return redirect(to);
   };
 
-  if (!provider) return new Response('Unbekannter Provider', { status: 404 });
+  if (!provider) return new Response('Unknown provider', { status: 404 });
   if (!tx || tx.provider !== provider.id || Date.now() - tx.createdAt > TX_MAX_AGE_MS) {
-    return fail('Die Anmeldung ist abgelaufen oder ungültig. Bitte erneut versuchen.');
+    return fail('flash.expired');
   }
 
   const back = tx.intent === 'link' ? '/profile' : '/';
@@ -24,7 +31,7 @@ export const GET: APIRoute = async ({ params, url, locals, session, redirect }) 
   const idpError = url.searchParams.get('error');
   if (idpError) {
     console.warn(`[auth] ${provider.id} returned an error: ${idpError}`, url.searchParams.get('error_description'));
-    return fail(`${provider.label}: Die Anmeldung wurde abgebrochen oder abgelehnt.`, back);
+    return fail('flash.cancelled', back);
   }
 
   let profile;
@@ -32,22 +39,14 @@ export const GET: APIRoute = async ({ params, url, locals, session, redirect }) 
     profile = await completeAuthorization(provider, tx, url);
   } catch (err) {
     console.error(`[auth] callback from ${provider.id} failed`, err);
-    return fail(`Die Antwort von ${provider.label} konnte nicht verarbeitet werden.`, back);
+    return fail('flash.failed', back);
   }
 
   // --- Link: attach the identity to the signed-in user ---
   if (tx.intent === 'link') {
-    if (!locals.user) return fail('Bitte zuerst anmelden.');
+    if (!locals.user) return fail('flash.signInFirst');
     const result = await store.linkIdentity(locals.user.id, provider.id, profile);
-    const messages = {
-      linked: { kind: 'success', message: `${provider.label}-Account wurde verbunden.` },
-      'already-linked': { kind: 'info', message: `Dieser ${provider.label}-Account ist bereits verbunden.` },
-      conflict: {
-        kind: 'error',
-        message: `Dieser ${provider.label}-Account gehört bereits zu einem anderen Benutzerkonto und wurde nicht verbunden.`,
-      },
-    } as const;
-    session?.set('flash', messages[result]);
+    session?.set('flash', { ...LINK_MESSAGES[result], params: { provider: provider.label } });
     if (result === 'linked') session?.set('lastAuthAt', Date.now());
     return redirect('/profile');
   }
@@ -64,5 +63,6 @@ export const GET: APIRoute = async ({ params, url, locals, session, redirect }) 
   await session?.regenerate();
   session?.set('userId', userId);
   session?.set('lastAuthAt', Date.now());
+  session?.set('currentIdentity', { issuer: profile.issuer, subject: profile.subject });
   return redirect('/profile');
 };

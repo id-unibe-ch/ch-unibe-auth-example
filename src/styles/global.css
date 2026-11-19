@@ -1,8 +1,29 @@
 @import "tailwindcss";
 
+/* Dark mode follows the class on <html>, set on the server from the theme cookie (dark by default, ADR-017). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-  /* UniBE red – check against the current corporate design manual. */
-  --color-unibe: #e3001b;
-  --color-unibe-dark: #b80016;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+@layer base {
+  a {
+    color: var(--color-emerald-700);
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--color-emerald-800);
+  }
+  .dark a {
+    color: var(--color-emerald-300);
+  }
+  .dark a:hover {
+    color: var(--color-emerald-200);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-emerald-500);
+    outline-offset: 2px;
+  }
 }

@@ -37,14 +37,17 @@ export interface OAuth2Endpoints {
   fetchProfile: (accessToken: string) => Promise<ProviderProfile>;
 }
 
+/** Where the sign-in page lists a provider (grouped by audience, ADR-017). */
+export type ProviderSection = 'primary' | 'academic' | 'other';
+
 export interface ProviderDefinition {
   id: string;
+  section: ProviderSection;
+  /** Brand name, the same in every language. Descriptions live in src/i18n/ui.ts. */
   label: string;
-  description: string;
   group: ProviderGroup;
   protocol: Protocol;
   status: ProviderStatus;
-  statusNote?: string;
   /** Prefix of the environment variables: {PREFIX}_CLIENT_ID, {PREFIX}_CLIENT_SECRET */
   envPrefix: string;
   scope: string;
@@ -139,8 +142,8 @@ async function fetchGitHubProfile(accessToken: string): Promise<ProviderProfile>
 export const providers: ProviderDefinition[] = [
   {
     id: 'unibe',
-    label: 'Universität Bern',
-    description: 'Mitarbeitende und Studierende (Entra ID, UniBE-Tenant)',
+    section: 'primary',
+    label: 'UniBE',
     group: 'direct',
     protocol: 'oidc',
     status: 'available',
@@ -155,8 +158,8 @@ export const providers: ProviderDefinition[] = [
   },
   {
     id: 'microsoft',
+    section: 'other',
     label: 'Microsoft',
-    description: 'Persönliche Microsoft-Konten sowie Geschäfts- und Schulkonten aller Tenants',
     group: 'direct',
     protocol: 'oidc',
     status: 'available',
@@ -169,8 +172,8 @@ export const providers: ProviderDefinition[] = [
   },
   {
     id: 'switch',
+    section: 'academic',
     label: 'SWITCH edu-ID',
-    description: 'Hochschulangehörige in der Schweiz und international (SWITCHaai)',
     group: 'direct',
     protocol: 'oidc',
     status: 'available',
@@ -180,8 +183,8 @@ export const providers: ProviderDefinition[] = [
   },
   {
     id: 'orcid',
+    section: 'academic',
     label: 'ORCID',
-    description: 'Forschende mit ORCID iD',
     group: 'direct',
     protocol: 'oidc',
     status: 'available',
@@ -191,20 +194,19 @@ export const providers: ProviderDefinition[] = [
   },
   {
     id: 'agov',
+    section: 'other',
     label: 'AGOV',
-    description: 'Staatliches Login der Schweiz',
     group: 'direct',
     protocol: 'oidc',
     status: 'pending',
-    statusNote: 'Zugang in Klärung',
     envPrefix: 'AGOV',
     scope: 'openid profile email',
     issuer: () => env('AGOV_ISSUER'),
   },
   {
     id: 'google',
+    section: 'other',
     label: 'Google',
-    description: 'Google-Konto',
     group: 'direct',
     protocol: 'oidc',
     status: 'available',
@@ -215,20 +217,19 @@ export const providers: ProviderDefinition[] = [
   },
   {
     id: 'apple',
+    section: 'other',
     label: 'Apple',
-    description: 'Apple-ID',
     group: 'direct',
     protocol: 'oidc',
     status: 'deferred',
-    statusNote: 'Zurückgestellt – kein Apple-Developer-Account',
     envPrefix: 'APPLE',
     scope: 'openid name email',
     issuer: () => 'https://appleid.apple.com',
   },
   {
     id: 'github',
+    section: 'other',
     label: 'GitHub',
-    description: 'GitHub-Konto (OAuth 2.0, kein OIDC)',
     group: 'direct',
     protocol: 'oauth2',
     status: 'available',
@@ -244,19 +245,18 @@ export const providers: ProviderDefinition[] = [
   },
   {
     id: 'meta',
+    section: 'other',
     label: 'Meta (Facebook)',
-    description: 'Facebook-Konto (OAuth 2.0)',
     group: 'direct',
     protocol: 'oauth2',
     status: 'deferred',
-    statusNote: 'Zurückgestellt – kein Meta-Business-Account',
     envPrefix: 'META',
     scope: 'public_profile email',
   },
   {
     id: 'external-id',
+    section: 'other',
     label: 'UniBE External ID',
-    description: 'Externe Personen: Google, E-Mail-Einmalcode u. a. über Entra External ID',
     group: 'broker',
     protocol: 'oidc',
     status: 'available',

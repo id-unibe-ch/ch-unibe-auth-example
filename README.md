@@ -84,6 +84,7 @@ Bicep template in `infra/`, GitHub Actions workflows in `.github/workflows/` (CI
 
 ```
 src/
+  i18n/ui.ts             UI strings, German and English
   lib/providers.ts       Provider registry (add new IdPs here)
   lib/auth.ts            Authorization code flow with PKCE (openid-client)
   lib/store.ts           UserStore interface + in-memory variant (development without a DB)
@@ -91,7 +92,10 @@ src/
   lib/db.ts              Connection pool, Entra or SQL login
   lib/session-driver.ts  Astro sessions in Azure SQL
   middleware.ts          Session → user, access control, security headers
+  lib/prefs.ts           Language and theme cookies
+  components/            Provider buttons and logos, icons, UniBE logo
   pages/index.astro      Sign-in page
+  pages/choose.astro     Guided sign-in ("Who are you?")
   pages/profile.astro    Profile with linked accounts
   pages/auth/…           Sign-in, callback, sign-out
   pages/account/…        Unlink an account, delete the account

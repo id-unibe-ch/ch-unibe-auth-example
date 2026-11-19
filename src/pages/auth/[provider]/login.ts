@@ -6,7 +6,7 @@ import { getProvider, isEnabled } from '../../../lib/providers';
 export const GET: APIRoute = async ({ params, url, locals, session, redirect }) => {
   const provider = getProvider(params.provider);
   if (!provider || !isEnabled(provider)) {
-    return new Response('Unbekannter oder nicht konfigurierter Provider', { status: 404 });
+    return new Response('Unknown or unconfigured provider', { status: 404 });
   }
 
   const intent = url.searchParams.get('intent') === 'link' ? 'link' : 'login';
@@ -18,10 +18,7 @@ export const GET: APIRoute = async ({ params, url, locals, session, redirect }) 
     return redirect(target.href);
   } catch (err) {
     console.error(`[auth] starting ${provider.id} failed`, err);
-    session?.set('flash', {
-      kind: 'error',
-      message: `Die Anmeldung bei ${provider.label} konnte nicht gestartet werden.`,
-    });
+    session?.set('flash', { kind: 'error', key: 'flash.startFailed', params: { provider: provider.label } });
     return redirect(intent === 'link' ? '/profile' : '/');
   }
 };

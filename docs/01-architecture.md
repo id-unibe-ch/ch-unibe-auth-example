@@ -42,7 +42,10 @@ flowchart LR
 
 | Component | Purpose |
 |---|---|
-| **Sign-in page** (`/`) | Start page. Shows every sign-in method, grouped into "direct" and "via External ID". Passkey sign-in as its own option. |
+| **Sign-in page** (`/`) | Start page. Every sign-in method, grouped by audience: UniBE, universities & research, other accounts; passkey sign-in and "coming soon" ([ADR-017](02-decisions.md)). |
+| **Guided sign-in** (`/choose?for=…`) | "Who are you?" → a recommended method plus alternatives. Plain links, no JavaScript. |
+| **Preferences** (`/prefs?lang=…&theme=…&next=…`) | Sets the language (de/en) and theme (dark/light) cookies and returns to a same-site path. Dark is the default. |
+| **UI strings** (`src/i18n/ui.ts`) | All visible text in German and English; flash messages are stored as keys so they render in the viewer's language. |
 | **Auth routes** (`/auth/[provider]/login`, `/auth/[provider]/callback`) | One generic handler per provider: builds the authorization request (PKCE, `state`, `nonce`), processes the callback, validates tokens or fetches the user's data. |
 | **Provider registry** (`src/lib/providers.ts`) | One definition per provider (type `oidc` / `oauth2`, issuer or endpoints, scopes, identity key). A new IdP is a new entry. |
 | **Profile** (`/profile`) | Shows the user account, linked accounts (provider, linked at, last sign-in, selected claims) and later passkeys. Actions: link, unlink, delete account. |
