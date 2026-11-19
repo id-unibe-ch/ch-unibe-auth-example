@@ -17,7 +17,7 @@ Client-ID und Secret kommen in die Umgebungsvariablen (lokal `.env`, produktiv K
 |---|---|---|---|---|
 | 1 | UniBE-Tenant (unibe365) | `unibe` | `ENTRA_UNIBE_CLIENT_ID`, `ENTRA_UNIBE_CLIENT_SECRET` | ☑ registriert |
 | 2 | UniBE-Tenant (unibe365) | `microsoft` | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | ☑ registriert |
-| 3 | External ID `unibeeid` | `external-id` | `EXTERNAL_ID_CLIENT_ID`, `EXTERNAL_ID_CLIENT_SECRET` | ☑ registriert, User Flow offen |
+| 3 | External ID `unibeeid` | `external-id` | `EXTERNAL_ID_CLIENT_ID`, `EXTERNAL_ID_CLIENT_SECRET` | ☑ registriert, User Flow angelegt |
 | 4 | SWITCH Resource Registry | `switch` | `SWITCH_CLIENT_ID`, `SWITCH_CLIENT_SECRET` | ☐ |
 | 5 | ORCID Developer Tools | `orcid` | `ORCID_CLIENT_ID`, `ORCID_CLIENT_SECRET` (`ORCID_ISSUER` für die Sandbox) | ☐ |
 | 6 | Google Cloud Console | `google` | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | ☐ |
@@ -66,8 +66,8 @@ Client-ID und Secret kommen in die Umgebungsvariablen (lokal `.env`, produktiv K
   - [ ] `http://localhost:4321/auth/external-id/callback`
 - [ ] API-Berechtigungen: `openid`, `profile`, `email`; Admin-Zustimmung erteilen
 - [ ] Client Secret erstellen, Ablaufdatum notieren
-- [ ] **Voraussetzung:** External Tenant mit einer Azure-Subscription verknüpft (Home → Billing). Keine Kreditkarte nötig, wenn eine bestehende UniBE-Subscription verknüpft wird. Die ersten 50 000 monatlich aktiven Benutzer:innen sind kostenlos, Add-ons (z. B. SMS-MFA) nicht.
-- [ ] User Flow «Registrieren und anmelden» anlegen bzw. bestehenden wählen und **die App dem User Flow zuweisen**
+- [x] **Voraussetzung:** External Tenant mit einer Azure-Subscription verknüpft (Home → Billing). Keine Kreditkarte nötig, wenn eine bestehende UniBE-Subscription verknüpft wird. Die ersten 50 000 monatlich aktiven Benutzer:innen sind kostenlos, Add-ons (z. B. SMS-MFA) nicht.
+- [x] User Flow «Registrieren und anmelden» anlegen (im **Entra Admin Center** unter Entra ID → External Identities → User flows – nicht im Azure-Portal: dort fehlt im External Tenant die Subscription, da sie im UniBE-Tenant liegt) bzw. bestehenden wählen und **die App dem User Flow zuweisen**
 - [ ] Anmeldemethoden im User Flow festlegen (E-Mail-Einmalcode, Google, ggf. Passkeys – siehe [offene Frage 2](05-open-questions.md))
 - [ ] Optional: Company Branding für die Anmeldeseite
 
