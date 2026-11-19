@@ -1,0 +1,83 @@
+---
+import Icon from './Icon.astro';
+import { t } from '../i18n/ui';
+
+/**
+ * "Sign in with a passkey": asks the browser for any passkey of this site (discoverable
+ * credential, no user name needed) and posts the signed challenge to /passkey/login/verify.
+ */
+const { locale } = Astro.locals;
+const messages = {
+  working: t(locale, 'passkey.working'),
+  cancelled: t(locale, 'passkey.error.cancelled'),
+  unsupported: t(locale, 'passkey.error.unsupported'),
+  failed: t(locale, 'passkey.error.failed'),
+  errors: {
+    'passkey.error.expired': t(locale, 'passkey.error.expired'),
+    'passkey.error.failed': t(locale, 'passkey.error.failed'),
+    'passkey.error.unknown': t(locale, 'passkey.error.unknown'),
+  },
+};
+---
+
+<passkey-login data-messages={JSON.stringify(messages)}>
+  <button
+    type="button"
+    class="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-emerald-300 bg-emerald-50 font-semibold text-emerald-900 hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-70 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900"
+  >
+    <Icon name="key" class="h-[18px] w-[18px]" />
+    {t(locale, 'login.passkey')}
+  </button>
+  <p data-status role="status" aria-live="polite" class="mt-2 min-h-5 text-center text-[13px] text-zinc-600 dark:text-zinc-400"></p>
+</passkey-login>
+
+<script>
+  import { browserSupportsWebAuthn, startAuthentication, WebAuthnError } from '@simplewebauthn/browser';
+
+  class PasskeyLogin extends HTMLElement {
+    connectedCallback() {
+      const button = this.querySelector('button')!;
+      const status = this.querySelector<HTMLElement>('[data-status]')!;
+      const m = JSON.parse(this.dataset.messages ?? '{}');
+      const say = (text: string, error = false) => {
+        status.textContent = text;
+        status.classList.toggle('text-red-700', error);
+        status.classList.toggle('dark:text-red-300', error);
+      };
+      if (!browserSupportsWebAuthn()) {
+        button.disabled = true;
+        say(m.unsupported, true);
+        return;
+      }
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        say(m.working);
+        try {
+          const optionsJSON = await (await fetch('/passkey/login/options', { method: 'POST' })).json();
+          const response = await startAuthentication({ optionsJSON });
+          const res = await fetch('/passkey/login/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ response }),
+          });
+          const result = await res.json();
+          if (result.ok) {
+            location.href = result.redirect;
+            return;
+          }
+          say(m.errors[result.error] ?? m.failed, true);
+        } catch (err) {
+          // The user closing the browser's dialog arrives as NotAllowedError (directly or as the cause).
+          const e = err as { name?: string; cause?: { name?: string } };
+          const cancelled =
+            (err instanceof WebAuthnError && err.code === 'ERROR_CEREMONY_ABORTED') ||
+            e?.name === 'NotAllowedError' ||
+            e?.cause?.name === 'NotAllowedError';
+          say(cancelled ? m.cancelled : m.failed, !cancelled);
+        }
+        button.disabled = false;
+      });
+    }
+  }
+  customElements.define('passkey-login', PasskeyLogin);
+</script>

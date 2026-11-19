@@ -90,6 +90,7 @@ src/
   lib/store.ts           UserStore interface + in-memory variant (development without a DB)
   lib/store-sql.ts       UserStore on Azure SQL
   lib/db.ts              Connection pool, Entra or SQL login
+  lib/webauthn.ts        Passkeys: options and verification (SimpleWebAuthn)
   lib/session-driver.ts  Astro sessions in Azure SQL
   middleware.ts          Session → user, access control, security headers
   lib/prefs.ts           Language and theme cookies
@@ -98,7 +99,8 @@ src/
   pages/choose.astro     Guided sign-in ("Who are you?")
   pages/profile.astro    Profile with linked accounts
   pages/auth/…           Sign-in, callback, sign-out
-  pages/account/…        Unlink an account, delete the account
+  pages/passkey/…        Passkey registration and sign-in (JSON)
+  pages/account/…        Unlink an account, rename/delete a passkey, delete the account
 db/migrations/           SQL schema (npm run db:migrate)
 infra/                   Bicep template, parameters, SQL grants for the managed identities
 .github/workflows/       CI, deploy, infrastructure, Key Vault secrets
@@ -111,7 +113,7 @@ infra/                   Bicep template, parameters, SQL grants for the managed 
 - [x] Infrastructure as Bicep (Container Apps, SQL, Key Vault)
 - [x] CI/CD (GitHub Actions with OIDC federation)
 - [ ] App registrations at the providers (Entra UniBE, Microsoft, External ID done)
-- [ ] Passkeys (WebAuthn)
+- [x] Passkeys (WebAuthn)
 
 ## Language
 

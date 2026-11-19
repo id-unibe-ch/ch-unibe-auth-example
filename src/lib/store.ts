@@ -4,7 +4,7 @@ import type { ProviderProfile } from './providers';
 import { SqlUserStore } from './store-sql';
 
 /**
- * Data access for user accounts and linked identities.
+ * Data access for user accounts, linked identities and the app's own passkeys.
  * Data model: docs/04-account-linking.md
  *
  * Two implementations:
@@ -24,11 +24,30 @@ export interface Identity {
   lastLoginAt: Date;
 }
 
+/** A WebAuthn credential registered with this app (ADR-009). */
+export interface Passkey {
+  id: string;
+  /** base64url, as the browser returns it */
+  credentialId: string;
+  publicKey: Uint8Array<ArrayBuffer>;
+  counter: number;
+  transports: string[];
+  /** 'multiDevice' = a synced passkey (iCloud Keychain, Google Password Manager, …) */
+  deviceType: 'singleDevice' | 'multiDevice';
+  backedUp: boolean;
+  name: string;
+  createdAt: Date;
+  lastUsedAt?: Date;
+}
+
+export type NewPasskey = Omit<Passkey, 'id' | 'createdAt' | 'lastUsedAt'>;
+
 export interface User {
   id: string;
   displayName?: string;
   createdAt: Date;
   identities: Identity[];
+  passkeys: Passkey[];
 }
 
 export type LinkResult = 'linked' | 'already-linked' | 'conflict';
@@ -43,7 +62,18 @@ export interface UserStore {
   linkIdentity(userId: string, provider: string, profile: ProviderProfile): Promise<LinkResult>;
   unlinkIdentity(userId: string, identityId: string): Promise<UnlinkResult>;
   deleteUser(userId: string): Promise<void>;
+
+  findPasskey(credentialId: string): Promise<{ userId: string; passkey: Passkey } | undefined>;
+  addPasskey(userId: string, passkey: NewPasskey): Promise<Passkey>;
+  /** Stores the new signature counter and backup state after a sign-in. */
+  recordPasskeyUse(passkeyId: string, counter: number, backedUp: boolean): Promise<void>;
+  renamePasskey(userId: string, passkeyId: string, name: string): Promise<boolean>;
+  /** Like unlinking: refused if it would leave the account without a way to sign in. */
+  deletePasskey(userId: string, passkeyId: string): Promise<UnlinkResult>;
 }
+
+/** Sign-in methods left on an account: linked identities plus passkeys. */
+export const signInMethods = (u: User) => u.identities.length + u.passkeys.length;
 
 const key = (issuer: string, subject: string) => `${issuer}\u0000${subject}`;
 
@@ -82,6 +112,7 @@ class MemoryUserStore implements UserStore {
       displayName: profile.displayName,
       createdAt: new Date(),
       identities: [identity],
+      passkeys: [],
     };
     this.users.set(user.id, user);
     this.identityIndex.set(key(identity.issuer, identity.subject), user.id);
@@ -119,8 +150,8 @@ class MemoryUserStore implements UserStore {
     const user = this.users.get(userId);
     const identity = user?.identities.find((i) => i.id === identityId);
     if (!user || !identity) return 'not-found';
-    // Later also count passkeys: one way to sign in has to remain.
-    if (user.identities.length <= 1) return 'last-identity';
+    // One way to sign in – an identity or a passkey – has to remain.
+    if (signInMethods(user) <= 1) return 'last-identity';
     user.identities = user.identities.filter((i) => i.id !== identityId);
     this.identityIndex.delete(key(identity.issuer, identity.subject));
     return 'unlinked';
@@ -131,6 +162,45 @@ class MemoryUserStore implements UserStore {
     if (!user) return;
     for (const i of user.identities) this.identityIndex.delete(key(i.issuer, i.subject));
     this.users.delete(userId);
+  }
+
+  async findPasskey(credentialId: string) {
+    for (const user of this.users.values()) {
+      const passkey = user.passkeys.find((p) => p.credentialId === credentialId);
+      if (passkey) return { userId: user.id, passkey };
+    }
+    return undefined;
+  }
+
+  async addPasskey(userId: string, passkey: NewPasskey) {
+    const user = this.users.get(userId);
+    if (!user) throw new Error('User not found');
+    if (await this.findPasskey(passkey.credentialId)) throw new Error('Passkey already registered');
+    const stored: Passkey = { ...passkey, id: randomUUID(), createdAt: new Date() };
+    user.passkeys.push(stored);
+    return stored;
+  }
+
+  async recordPasskeyUse(passkeyId: string, counter: number, backedUp: boolean) {
+    for (const user of this.users.values()) {
+      const passkey = user.passkeys.find((p) => p.id === passkeyId);
+      if (passkey) Object.assign(passkey, { counter, backedUp, lastUsedAt: new Date() });
+    }
+  }
+
+  async renamePasskey(userId: string, passkeyId: string, name: string) {
+    const passkey = this.users.get(userId)?.passkeys.find((p) => p.id === passkeyId);
+    if (!passkey) return false;
+    passkey.name = name;
+    return true;
+  }
+
+  async deletePasskey(userId: string, passkeyId: string) {
+    const user = this.users.get(userId);
+    if (!user || !user.passkeys.some((p) => p.id === passkeyId)) return 'not-found';
+    if (signInMethods(user) <= 1) return 'last-identity';
+    user.passkeys = user.passkeys.filter((p) => p.id !== passkeyId);
+    return 'unlinked';
   }
 }
 

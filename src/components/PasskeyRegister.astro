@@ -1,0 +1,98 @@
+---
+import Icon from './Icon.astro';
+import { t } from '../i18n/ui';
+
+/** "Add a passkey" in the profile: an optional name, then navigator.credentials.create(). */
+const { locale } = Astro.locals;
+const messages = {
+  working: t(locale, 'passkey.working'),
+  cancelled: t(locale, 'passkey.error.cancelled'),
+  unsupported: t(locale, 'passkey.error.unsupported'),
+  failed: t(locale, 'passkey.error.failed'),
+  errors: {
+    'passkey.error.expired': t(locale, 'passkey.error.expired'),
+    'passkey.error.failed': t(locale, 'passkey.error.failed'),
+    'passkey.error.exists': t(locale, 'passkey.error.exists'),
+    'passkey.error.signIn': t(locale, 'passkey.error.signIn'),
+  },
+};
+---
+
+<passkey-register data-messages={JSON.stringify(messages)}>
+  <div class="flex flex-wrap items-end gap-3">
+    <label class="flex min-w-0 flex-[1_1_220px] flex-col gap-1 text-[13px] text-zinc-700 dark:text-zinc-300">
+      {t(locale, 'passkey.nameLabel')}
+      <input
+        type="text"
+        name="name"
+        maxlength="100"
+        placeholder={t(locale, 'passkey.namePlaceholder')}
+        class="min-h-11 rounded-[10px] border border-zinc-300 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+      />
+    </label>
+    <button
+      type="button"
+      class="flex min-h-11 cursor-pointer items-center gap-2 rounded-[10px] bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-70 dark:bg-emerald-400 dark:text-emerald-950 dark:hover:bg-emerald-300"
+    >
+      <Icon name="key" class="h-4 w-4" />
+      {t(locale, 'passkey.add')}
+    </button>
+  </div>
+  <p data-status role="status" aria-live="polite" class="mt-2 min-h-5 text-[13px] text-zinc-600 dark:text-zinc-400"></p>
+</passkey-register>
+
+<script>
+  import { browserSupportsWebAuthn, startRegistration, WebAuthnError } from '@simplewebauthn/browser';
+
+  class PasskeyRegister extends HTMLElement {
+    connectedCallback() {
+      const button = this.querySelector('button')!;
+      const input = this.querySelector('input')!;
+      const status = this.querySelector<HTMLElement>('[data-status]')!;
+      const m = JSON.parse(this.dataset.messages ?? '{}');
+      const say = (text: string, error = false) => {
+        status.textContent = text;
+        status.classList.toggle('text-red-700', error);
+        status.classList.toggle('dark:text-red-300', error);
+      };
+      if (!browserSupportsWebAuthn()) {
+        button.disabled = true;
+        say(m.unsupported, true);
+        return;
+      }
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        say(m.working);
+        try {
+          const optionsJSON = await (await fetch('/passkey/register/options', { method: 'POST' })).json();
+          if (optionsJSON.error) throw Object.assign(new Error(optionsJSON.error), { key: optionsJSON.error });
+          const response = await startRegistration({ optionsJSON });
+          const res = await fetch('/passkey/register/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ response, name: input.value }),
+          });
+          const result = await res.json();
+          if (result.ok) {
+            location.href = result.redirect;
+            return;
+          }
+          say(m.errors[result.error] ?? m.failed, true);
+        } catch (err) {
+          const key = (err as { key?: string }).key;
+          // The user closing the browser's dialog arrives as NotAllowedError (directly or as the cause).
+          const e = err as { name?: string; cause?: { name?: string } };
+          const cancelled =
+            (err instanceof WebAuthnError && err.code === 'ERROR_CEREMONY_ABORTED') ||
+            e?.name === 'NotAllowedError' ||
+            e?.cause?.name === 'NotAllowedError';
+          // The browser refuses a passkey that is already on this authenticator (excludeCredentials).
+          const exists = err instanceof WebAuthnError && err.code === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED';
+          say(key ? (m.errors[key] ?? m.failed) : exists ? m.errors['passkey.error.exists'] : cancelled ? m.cancelled : m.failed, !cancelled);
+        }
+        button.disabled = false;
+      });
+    }
+  }
+  customElements.define('passkey-register', PasskeyRegister);
+</script>

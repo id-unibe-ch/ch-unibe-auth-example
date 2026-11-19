@@ -64,5 +64,6 @@ export const GET: APIRoute = async ({ params, url, locals, session, redirect }) 
   session?.set('userId', userId);
   session?.set('lastAuthAt', Date.now());
   session?.set('currentIdentity', { issuer: profile.issuer, subject: profile.subject });
+  session?.delete('currentPasskey');
   return redirect('/profile');
 };

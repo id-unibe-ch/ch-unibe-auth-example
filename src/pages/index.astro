@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Icon from '../components/Icon.astro';
+import PasskeyLogin from '../components/PasskeyLogin.astro';
 import ProviderButton from '../components/ProviderButton.astro';
 import { providerLabel, t } from '../i18n/ui';
 import { providers } from '../lib/providers';
@@ -97,18 +98,11 @@ const features = [
         <span class="h-px flex-1 bg-zinc-200 dark:bg-zinc-800"></span>
       </div>
 
-      <button
-        type="button"
-        disabled
-        class="flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 font-semibold text-emerald-800 opacity-70 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-      >
-        <Icon name="key" class="h-[18px] w-[18px]" />
-        {t(locale, 'login.passkeySoon')}
-      </button>
+      <PasskeyLogin />
 
       {
         soon.length > 0 && (
-          <div class="mt-6 flex flex-wrap items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+          <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
             <span>{t(locale, 'login.comingSoon')}</span>
             {soon.map((p) => (
               <span class="rounded-full border border-dashed border-zinc-300 px-2.5 py-0.5 dark:border-zinc-700">

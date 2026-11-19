@@ -50,7 +50,7 @@ flowchart LR
 | **Provider registry** (`src/lib/providers.ts`) | One definition per provider (type `oidc` / `oauth2`, issuer or endpoints, scopes, identity key). A new IdP is a new entry. |
 | **Profile** (`/profile`) | Shows the user account, linked accounts (provider, linked at, last sign-in, selected claims) and later passkeys. Actions: link, unlink, delete account. |
 | **Linking** (`/auth/[provider]/login?intent=link`) | Like sign-in, but the result is attached to the signed-in user (see [04](04-account-linking.md)). |
-| **Passkey routes** (`/passkey/*`) | WebAuthn registration and sign-in (SimpleWebAuthn) – planned. |
+| **Passkey routes** (`/passkey/*`, `/account/passkey/*`) | WebAuthn registration and sign-in (SimpleWebAuthn), rename and delete. |
 | **Session** | Astro sessions with a driver on Azure SQL; the session id is in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie. |
 | **Technical details** | A collapsible view per linked account: issuer, subject and the selected claims – central to the demo's purpose. Tokens themselves are never shown. |
 

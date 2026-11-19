@@ -25,7 +25,7 @@ Users land directly on the sign-in page, sign in with one of the offered methods
 - **Tailwind CSS** (v4 via `@tailwindcss/vite`)
 - **openid-client** (panva) for all OIDC and OAuth 2.0 flows
 - **Azure SQL** via `mssql`, migrations as plain SQL
-- **SimpleWebAuthn** for the app's own passkeys (planned)
+- **SimpleWebAuthn** for the app's own passkeys
 - **Hosting:** Azure Container Apps + Azure SQL Basic, region Switzerland North, about CHF 10/month – see [06](06-hosting-and-data.md)
 - **Domain:** `https://login-example.campus.cloud`
 
