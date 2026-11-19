@@ -31,8 +31,8 @@ param tags object = {
 @description('Phase 2: Container App und Migrations-Job bereitstellen. Erst setzen, wenn die Secrets im Key Vault vorhanden sind.')
 param deployApp bool = false
 
-@description('Container-Image, z. B. ghcr.io/id-unibe-ch/ch-unibe-auth-example:1.0.0')
-param containerImage string = ''
+@description('Container-Image, z. B. ghcr.io/id-unibe-ch/ch-unibe-auth-example:<commit-sha>')
+param containerImage string = 'ghcr.io/id-unibe-ch/ch-unibe-auth-example:latest'
 
 @description('Container-Registry für private Images (leer = öffentliches Image), z. B. ghcr.io')
 param registryServer string = ''
@@ -50,15 +50,20 @@ param sqlAdminGroupName string
 @description('Entra-Gruppe, die Administrator des SQL-Servers wird: Objekt-ID.')
 param sqlAdminGroupObjectId string
 
-@description('Objekt-ID einer Person oder Gruppe, die Secrets im Key Vault setzen darf (leer = keine Zuweisung).')
+@description('''Rollenzuweisungen anlegen. Eine Tenant-Policy verbietet Service Principals das Zuweisen von Rollen:
+Der GitHub-Workflow setzt deshalb false; die Rollen legt eine Person beim ersten Deployment an (docs/08-deployment.md).''')
+param assignRoles bool = true
+
+@description('Objekt-ID des Principals, der Secrets im Key Vault setzen darf – typischerweise der Service Principal der GitHub-Workflows (leer = keine Zuweisung).')
 param secretsOfficerPrincipalId string = ''
 
 @description('Typ des Secrets-Officer-Principals.')
 @allowed([
+  'ServicePrincipal'
   'User'
   'Group'
 ])
-param secretsOfficerPrincipalType string = 'Group'
+param secretsOfficerPrincipalType string = 'ServicePrincipal'
 
 @description('Eigene Domain der App (leer = nur *.azurecontainerapps.io).')
 param customDomain string = 'login-example.campus.cloud'
@@ -157,12 +162,16 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     tenantId: subscription().tenantId
     sku: { family: 'A', name: 'standard' }
     enableRbacAuthorization: true
+    // Von der Policy «Enforce recommended guardrails for Azure Key Vault» verlangt.
+    // Purge Protection lässt sich nicht mehr ausschalten; der Name bleibt nach dem Löschen 30 Tage reserviert.
+    enableSoftDelete: true
     softDeleteRetentionInDays: 30
+    enablePurgeProtection: true
     publicNetworkAccess: 'Enabled'
   }
 }
 
-resource appSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource appSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (assignRoles) {
   scope: keyVault
   name: guid(keyVault.id, appIdentity.id, roleKeyVaultSecretsUser)
   properties: {
@@ -172,7 +181,7 @@ resource appSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-resource secretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(secretsOfficerPrincipalId)) {
+resource secretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (assignRoles && !empty(secretsOfficerPrincipalId)) {
   scope: keyVault
   name: guid(keyVault.id, secretsOfficerPrincipalId, roleKeyVaultSecretsOfficer)
   properties: {

@@ -72,7 +72,7 @@ docker run --rm -p 4321:4321 --env-file .env unibe-login-example
 
 ## Deployment (Azure)
 
-Bicep-Vorlage in `infra/`, Ablauf in [`docs/08-deployment.md`](docs/08-deployment.md).
+Bicep-Vorlage in `infra/`, GitHub-Actions-Workflows in `.github/workflows/` (CI, Deploy, Infrastruktur, Key Vault befüllen). Einrichtung und Ablauf: [`docs/08-deployment.md`](docs/08-deployment.md).
 
 ## Projektstruktur
 
@@ -100,4 +100,4 @@ infra/               Bicep-Vorlage, Parameter, SQL-Rechte für die Managed Ident
 - [ ] App-Registrierungen bei den Providern (Entra UniBE, Microsoft, External ID erledigt)
 - [ ] Passkeys (WebAuthn)
 - [x] Infrastruktur als Bicep (Container Apps, SQL, Key Vault)
-- [ ] CI/CD
+- [x] CI/CD (GitHub Actions mit OIDC-Federation)

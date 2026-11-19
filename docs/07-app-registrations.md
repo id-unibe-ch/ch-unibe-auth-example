@@ -77,6 +77,7 @@ Client-ID und Secret kommen in die Umgebungsvariablen (lokal `.env`, produktiv K
 - [ ] Redirect-URIs:
   - [ ] `https://login-example.campus.cloud/auth/switch/callback`
   - [ ] `http://localhost:4321/auth/switch/callback` (falls von SWITCH zugelassen; sonst separate Test-Ressource)
+- [ ] Keys and Secrets: Credential Type **Shared client secret**, Token Endpoint Method **Client Secret Post** (die App sendet das Secret im POST-Body, Standard von `openid-client`)
 - [ ] Attributfreigaben beantragen (z. B. Name, E-Mail, `swissEduPersonUniqueID`, Affiliation)
 - [ ] Client-ID und Secret übernehmen
 
