@@ -59,6 +59,17 @@ Status: **angenommen** = entschieden · **vorgeschlagen** = Vorschlag, noch zu b
 - **Kontext:** ORCID ist die Standard-ID für Forschende; Apple ist neben Google und Meta der wichtigste Consumer-IdP (und für iOS-Apps faktisch Pflicht, sobald andere Social Logins angeboten werden).
 - **Entscheid:** ORCID wird direkt via OIDC angebunden. Apple ist vorgesehen (direkt und über External ID), wird aber vorerst nicht aufgesetzt, da die UniBE aktuell keinen Apple-Developer-Account hat. Der Provider ist in der Registry als «zurückgestellt» hinterlegt und wird auf der Login-Seite entsprechend angezeigt.
 
+## ADR-014: Datenzugriff mit `mssql` und SQL-Migrationen, ohne ORM
+
+- **Status:** angenommen (umgesetzt)
+- **Kontext:** Für Azure SQL standen Prisma und Kysely zur Wahl. Die Anwendung braucht nur rund zehn einfache Abfragen; als Referenzimplementierung soll nachvollziehbar sein, was in der Datenbank passiert.
+- **Entscheid:** Direkter Zugriff mit dem Paket `mssql` (Treiber `tedious`) und parametrisierten SQL-Abfragen. Das Schema liegt als SQL-Dateien in `db/migrations/` und wird mit `npm run db:migrate` angewendet (Protokoll in `dbo.schema_migrations`).
+- **Konsequenzen:**
+  - Keine Code-Generierung, keine zusätzliche Abstraktionsschicht; das Schema ist direkt lesbar.
+  - Authentisierung an Azure SQL über Entra ID (Managed Identity) – kein Passwort in der Konfiguration. Lokal SQL-Login gegen SQL Server in Docker.
+  - Die Eindeutigkeit (Issuer, Subject) erzwingt die Datenbank per `UNIQUE`-Constraint; gleichzeitige Verknüpfungen derselben Identität werden dadurch korrekt als Konflikt erkannt.
+  - Astro-Sessions liegen über einen eigenen Session-Treiber in derselben Datenbank (`dbo.sessions`).
+
 ## ADR-012: Meta zurückgestellt
 
 - **Status:** angenommen

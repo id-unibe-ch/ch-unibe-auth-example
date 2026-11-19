@@ -29,3 +29,4 @@
 | Meta | Zurückgestellt – kein Meta-Business-Account ([ADR-012](02-decisions.md)) |
 | Domain | `login-example.campus.cloud` ([ADR-013](02-decisions.md)) |
 | Hosting/Kosten | Container Apps immer an + Azure SQL Basic, ca. CHF 10/Monat ([ADR-011](02-decisions.md)) |
+| Datenzugriff | `mssql` mit SQL-Migrationen, ohne ORM ([ADR-014](02-decisions.md)) |

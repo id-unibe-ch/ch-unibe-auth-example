@@ -12,7 +12,7 @@
 erDiagram
     USER ||--o{ IDENTITY : hat
     USER ||--o{ PASSKEY : hat
-    USER ||--o{ SESSION : hat
+    USER ||--o{ SESSION : "hat (über data.userId)"
 
     USER {
         uuid id PK
@@ -44,14 +44,16 @@ erDiagram
     }
     SESSION {
         string id PK
-        uuid user_id FK
-        datetime created_at
-        datetime expires_at
-        datetime last_auth_at "für Re-Auth vor sensiblen Aktionen"
+        string data "von Astro serialisiert: userId, lastAuthAt, authTx, flash"
+        datetime updated_at
     }
 ```
 
 Eindeutigkeit: `UNIQUE(issuer, subject)` auf IDENTITY, `UNIQUE(credential_id)` auf PASSKEY.
+
+Umsetzung: `db/migrations/001_initial.sql` (USER, IDENTITY, SESSION); PASSKEY folgt mit den Passkeys. Identitäten werden beim Löschen eines Benutzers per `ON DELETE CASCADE` mitgelöscht.
+
+**Sessions:** Die Session-Tabelle gehört Astro. Ihr Inhalt ist ein serialisierter Blob, den Ablauf einzelner Werte (TTL 8 Stunden) regelt Astro selbst. Zeilen, die länger als 24 Stunden nicht geschrieben wurden, löscht der Session-Treiber stündlich.
 
 `claims_snapshot` speichert nur die für die Demo nötigen Claims (Datenminimierung, siehe offene Fragen).
 

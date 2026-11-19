@@ -1,12 +1,15 @@
 import { randomUUID } from 'node:crypto';
+import { isDatabaseConfigured } from './db';
 import type { ProviderProfile } from './providers';
+import { SqlUserStore } from './store-sql';
 
 /**
  * Datenzugriff für Benutzerkonten und verknüpfte Identitäten.
  * Datenmodell: docs/04-account-linking.md
  *
- * Aktuell nur eine In-Memory-Implementierung für die Entwicklung.
- * Die Azure-SQL-Implementierung folgt mit derselben Schnittstelle.
+ * Zwei Implementierungen:
+ *   - SqlUserStore (store-sql.ts): Azure SQL, aktiv sobald SQL_SERVER und SQL_DATABASE gesetzt sind
+ *   - MemoryUserStore (unten): nur für die Entwicklung ohne Datenbank, Daten gehen beim Neustart verloren
  */
 
 export interface Identity {
@@ -133,4 +136,10 @@ class MemoryUserStore implements UserStore {
 
 // Auf globalThis ablegen, damit der Zustand Hot-Reloads im Dev-Server übersteht.
 const g = globalThis as unknown as { __userStore?: UserStore };
-export const store: UserStore = (g.__userStore ??= new MemoryUserStore());
+export const store: UserStore = (g.__userStore ??= isDatabaseConfigured()
+  ? new SqlUserStore()
+  : new MemoryUserStore());
+
+if (!isDatabaseConfigured()) {
+  console.warn('[store] Keine Datenbank konfiguriert (SQL_SERVER/SQL_DATABASE) – In-Memory-Speicher aktiv.');
+}

@@ -7,7 +7,7 @@ Beispielseite der Universität Bern, die verschiedene Anmeldemethoden über OIDC
 
 ## Stack
 
-Astro (SSR, Node-Adapter) · Tailwind CSS · openid-client · Azure Container Apps
+Astro (SSR, Node-Adapter) · Tailwind CSS · openid-client · Azure SQL (`mssql`) · Azure Container Apps
 
 ## Lokal starten
 
@@ -19,6 +19,16 @@ npm install
 
 ```bash
 cp .env.example .env
+```
+
+Lokale Datenbank starten und Schema anlegen (Docker nötig; ohne Datenbank läuft die App mit einem In-Memory-Speicher):
+
+```bash
+docker compose up -d
+```
+
+```bash
+npm run db:migrate -- --create-db
 ```
 
 Client-ID und Secret der gewünschten Provider in `.env` eintragen. Provider ohne Konfiguration werden auf der Login-Seite ausgegraut angezeigt.
@@ -66,18 +76,22 @@ docker run --rm -p 4321:4321 --env-file .env unibe-login-example
 src/
   lib/providers.ts   Provider-Registry (neue IdPs hier ergänzen)
   lib/auth.ts        Authorization Code Flow mit PKCE (openid-client)
-  lib/store.ts       Benutzer & Identitäten (aktuell In-Memory, später Azure SQL)
+  lib/store.ts       Schnittstelle UserStore + In-Memory-Variante (Entwicklung ohne DB)
+  lib/store-sql.ts   UserStore auf Azure SQL
+  lib/db.ts          Connection-Pool, Entra- oder SQL-Login
+  lib/session-driver.ts  Astro-Sessions in Azure SQL
   middleware.ts      Session → Benutzer, Zugriffsschutz, Security-Header
   pages/index.astro  Login-Seite
   pages/profile.astro Profil mit verbundenen Accounts
   pages/auth/…       Login, Callback, Logout
   pages/account/…    Account trennen, Konto löschen
+db/migrations/       SQL-Schema (npm run db:migrate)
 ```
 
 ## Stand
 
-- [x] Grundgerüst, Login-Seite, Profil, Verknüpfen/Trennen (In-Memory-Speicher)
-- [ ] App-Registrierungen bei den Providern
-- [ ] Azure SQL (Benutzer, Identitäten, Sessions)
+- [x] Grundgerüst, Login-Seite, Profil, Verknüpfen/Trennen
+- [x] Azure SQL (Benutzer, Identitäten, Sessions)
+- [ ] App-Registrierungen bei den Providern (Entra UniBE, Microsoft, External ID erledigt)
 - [ ] Passkeys (WebAuthn)
 - [ ] Infrastruktur (Container Apps, SQL, Key Vault) und CI/CD

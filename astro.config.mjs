@@ -13,8 +13,8 @@ export default defineConfig({
     checkOrigin: true,
   },
   session: {
-    // Vorläufig: Standard-Treiber des Node-Adapters (Dateisystem).
-    // Wird durch einen Azure-SQL-Treiber ersetzt (siehe docs/06-hosting-and-data.md).
+    // Azure SQL (dbo.sessions); ohne Datenbank-Konfiguration In-Memory. Siehe src/lib/session-driver.ts
+    driver: { entrypoint: new URL('./src/lib/session-driver.ts', import.meta.url) },
     ttl: 60 * 60 * 8,
   },
   vite: {

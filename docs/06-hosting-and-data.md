@@ -29,8 +29,26 @@ Die Seite wird vorgeführt; niemand soll auf das Aufwachen von App (einige Sekun
 
 ## Sessions
 
-- **Aktuell (Grundgerüst):** Astro Sessions mit dem Standardtreiber des Node-Adapters (Dateisystem im Container). Funktioniert nur mit genau einer Instanz; Sessions gehen bei Neustart/Deployment verloren.
-- **Ziel:** eigener Astro-Session-Treiber auf Azure SQL (Tabelle `SESSION`, siehe [04](04-account-linking.md)). Danach sind mehrere Instanzen möglich. Kein Redis nötig.
+Astro Sessions mit eigenem Treiber auf Azure SQL (`src/lib/session-driver.ts`, Tabelle `dbo.sessions`). Sessions überstehen Neustarts und Deployments; mehrere Instanzen sind möglich. Kein Redis nötig.
+
+Ohne Datenbank-Konfiguration fällt der Treiber auf einen In-Memory-Speicher zurück (nur für die Entwicklung).
+
+## Datenbank einrichten (Azure)
+
+1. Azure SQL Server in Switzerland North mit **Microsoft Entra-only authentication** anlegen und eine Entra-Gruppe als Administrator setzen.
+2. Datenbank im Tarif **Basic** anlegen.
+3. Managed Identity der Container App als Datenbankbenutzer anlegen (als Entra-Administrator verbunden):
+
+   ```sql
+   CREATE USER [<name-der-managed-identity>] FROM EXTERNAL PROVIDER;
+   ALTER ROLE db_datareader ADD MEMBER [<name-der-managed-identity>];
+   ALTER ROLE db_datawriter ADD MEMBER [<name-der-managed-identity>];
+   ```
+
+4. Migrationen mit einer Identität mit DDL-Rechten anwenden (z. B. CI/CD-Pipeline oder Administrator): `npm run db:migrate`. Das Container-Image enthält `db/` und `scripts/`, damit die Migration auch als Container-Apps-Job laufen kann.
+5. Container App konfigurieren: `SQL_SERVER=<server>.database.windows.net`, `SQL_DATABASE=<datenbank>`, `SQL_AUTH=entra`, bei user-assigned Identity zusätzlich `AZURE_CLIENT_ID`.
+
+Die App selbst hat bewusst keine DDL-Rechte.
 
 ## Verworfene Varianten
 
@@ -44,6 +62,6 @@ Die Seite wird vorgeführt; niemand soll auf das Aufwachen von App (einige Sekun
 | Cosmos DB Free Tier | 0 | nur ein Free-Tier-Konto pro Subscription, Unique Keys nur pro Partition |
 | PostgreSQL Flexible Server B1ms | ≈ CHF 15–20 | teurer ohne Mehrwert für diesen Zweck |
 
-## ORM / Datenzugriff
+## Datenzugriff
 
-Offen: Prisma oder Kysely (mit `tedious`) für Azure SQL. Die Anwendung greift über die Schnittstelle `UserStore` (`src/lib/store.ts`) zu; die SQL-Implementierung ersetzt die heutige In-Memory-Variante.
+`mssql` mit parametrisiertem SQL, ohne ORM ([ADR-014](02-decisions.md)). Die Anwendung greift über die Schnittstelle `UserStore` (`src/lib/store.ts`) zu: `SqlUserStore` (`src/lib/store-sql.ts`), sobald `SQL_SERVER` und `SQL_DATABASE` gesetzt sind, sonst ein In-Memory-Speicher für die Entwicklung.
