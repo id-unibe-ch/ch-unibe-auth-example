@@ -4,16 +4,16 @@
 
 | # | Provider | Zielgruppe | Protokoll | Weg | Identitätsschlüssel | Status |
 |---|---|---|---|---|---|---|
-| 1 | Entra ID – UniBE-Tenant | Mitarbeitende, Studierende | OIDC | direkt | `tid` + `oid` | geplant |
-| 2 | Microsoft (`common`) | persönliche MS-Konten + alle Entra-Tenants | OIDC | direkt | `tid` + `oid` | geplant |
-| 3 | Entra External ID | externe Personen (Social, E-Mail-OTP, Passkey) | OIDC | Broker | `iss` + `sub` (bzw. `oid`) | geplant – Konfiguration klären |
-| 4 | SWITCH edu-ID / SWITCHaai | Hochschulangehörige CH & international | OIDC | direkt | `iss` + `sub` | geplant |
-| 5 | ORCID | Forschende | OIDC | direkt | `sub` (= ORCID iD) | geplant |
+| 1 | Entra ID – UniBE-Tenant | Mitarbeitende, Studierende | OIDC | direkt | `tid` + `oid` | umgesetzt (Registrierung ausstehend) |
+| 2 | Microsoft (`common`) | persönliche MS-Konten + alle Entra-Tenants | OIDC | direkt | `tid` + `oid` | umgesetzt (Registrierung ausstehend) |
+| 3 | Entra External ID (`unibeeid`) | externe Personen (Social, E-Mail-OTP, Passkey) | OIDC | Broker | `iss` + `oid` | umgesetzt (Registrierung ausstehend) |
+| 4 | SWITCH edu-ID / SWITCHaai | Hochschulangehörige CH & international | OIDC | direkt | `iss` + `sub` | umgesetzt (Registrierung ausstehend) |
+| 5 | ORCID | Forschende | OIDC | direkt | `sub` (= ORCID iD) | umgesetzt (Registrierung ausstehend) |
 | 6 | AGOV | Bürger:innen, staatlich geprüfte Identität | OIDC | direkt | `iss` + `sub` | **Zugang offen** |
-| 7 | Google | Öffentlichkeit | OIDC | direkt + Broker | `iss` + `sub` | geplant |
-| 8 | Apple | Öffentlichkeit | OIDC | direkt + Broker | `iss` + `sub` | geplant |
-| 9 | GitHub | Entwickler:innen | **OAuth 2.0** | direkt | numerische `id` | geplant |
-| 10 | Meta (Facebook) | Öffentlichkeit | **OAuth 2.0** (direkt) / OIDC via Broker | direkt + Broker | App-scoped `id` | geplant |
+| 7 | Google | Öffentlichkeit | OIDC | direkt + Broker | `iss` + `sub` | umgesetzt (Registrierung ausstehend) |
+| 8 | Apple | Öffentlichkeit | OIDC | direkt + Broker | `iss` + `sub` | **zurückgestellt** (kein Apple-Developer-Account) |
+| 9 | GitHub | Entwickler:innen | **OAuth 2.0** | direkt | numerische `id` | umgesetzt (Registrierung ausstehend) |
+| 10 | Meta (Facebook) | Öffentlichkeit | **OAuth 2.0** (direkt) / OIDC via Broker | direkt + Broker | App-scoped `id` | **zurückgestellt** (kein Meta-Business-Account) |
 | 11 | Passkey (app-eigen) | alle eingeloggten Benutzer:innen | WebAuthn | app-eigen | Credential-ID | geplant |
 
 > **Hinweis Identitätsschlüssel:** Gespeichert wird immer das Paar (Issuer, Subject). Für Entra wird als Subject `oid` verwendet und als Issuer die tenant-spezifische Issuer-URL. Damit führen Anmeldungen über den UniBE-Button und den Microsoft-Button mit demselben UniBE-Konto zur selben Identität. Das Entra-`sub` ist dagegen pro App paarweise und eignet sich weniger als app-übergreifender Schlüssel.
@@ -22,7 +22,8 @@
 
 ## 1. Entra ID – UniBE-Tenant
 
-- **Endpunkt:** `https://login.microsoftonline.com/{unibe-tenant-id}/v2.0`
+- **Tenant:** `unibe.ch` – `d400387a-212f-43ea-ac7f-77aa12d7977e`
+- **Endpunkt:** `https://login.microsoftonline.com/d400387a-212f-43ea-ac7f-77aa12d7977e/v2.0`
 - **Registrierung:** App Registration im UniBE-Tenant (Single-Tenant).
 - **Scopes:** `openid profile email` (ggf. `offline_access` nicht nötig).
 - **Interessante Claims:** `oid`, `tid`, `preferred_username`, `name`, `amr`, optional Gruppen/Rollen (z. B. Mitarbeitende vs. Studierende – siehe offene Fragen).
@@ -38,7 +39,10 @@
 
 ## 3. Entra External ID (Broker)
 
-- **Endpunkt:** `https://{tenant}.ciamlogin.com/{tenant-id}/v2.0` (Annahme: bestehendes External-Tenant-Directory – zu bestätigen).
+- **Directory:** `unibeeid.onmicrosoft.com` – `a791c572-76d6-4480-83df-b81dcdb92f69` (External Tenant, Region EU). App-Registrierungen dürfen angelegt werden.
+- **Endpunkt (Discovery):** `https://a791c572-76d6-4480-83df-b81dcdb92f69.ciamlogin.com/a791c572-76d6-4480-83df-b81dcdb92f69/v2.0`
+- **Wichtig:** Discovery über `unibeeid.ciamlogin.com` liefert als Issuer die Tenant-ID-Variante (`{tid}.ciamlogin.com`). Damit die Issuer-Prüfung gelingt, muss die App direkt die Tenant-ID-URL verwenden.
+- **Identitätsschlüssel:** `oid` (Objekt-ID des Benutzers im External Tenant).
 - **Föderierte Provider im Broker:** Google, Apple, Facebook, E-Mail-OTP, Passkeys (Verfügbarkeit prüfen), optional weitere OIDC-Provider.
 - **Besonderheiten:** Die App sieht nur External ID als Issuer; der ursprüngliche Provider ist über das `idp`-Claim (falls konfiguriert) ersichtlich und wird im Profil angezeigt.
 

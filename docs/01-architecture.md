@@ -20,16 +20,16 @@ flowchart LR
         ORC[ORCID]
         AGOV[AGOV]
         GOO[Google]
-        APL[Apple]
+        APL[Apple – zurückgestellt]
         GH[GitHub – OAuth 2.0]
-        META[Meta – OAuth 2.0]
+        META[Meta – zurückgestellt]
     end
 
     subgraph Broker[Entra External ID]
-        XID[External ID Directory]
+        XID[External ID Directory<br/>unibeeid.onmicrosoft.com]
         XID --> XG[Google]
-        XID --> XA[Apple]
-        XID --> XF[Facebook]
+        XID --> XA[Apple – zurückgestellt]
+        XID --> XF[Facebook – zurückgestellt]
         XID --> XO[E-Mail-OTP]
         XID --> XP[Passkey]
     end

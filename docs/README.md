@@ -23,4 +23,5 @@ Benutzer:innen landen direkt auf der Anmeldeseite, melden sich mit einer der ang
 - **Tailwind CSS** (v4 via `@tailwindcss/vite`)
 - **openid-client** (panva) für alle OIDC- und OAuth-2.0-Flows
 - **SimpleWebAuthn** für app-eigene Passkeys
-- **Hosting:** Azure (Container Apps, Region Switzerland North) – siehe [06](06-hosting-and-data.md)
+- **Hosting:** Azure Container Apps + Azure SQL Basic, Region Switzerland North, ca. CHF 10/Monat – siehe [06](06-hosting-and-data.md)
+- **Domain:** `https://login-example.campus.cloud`

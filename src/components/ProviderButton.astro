@@ -1,0 +1,48 @@
+---
+import { isEnabled, type ProviderDefinition } from '../lib/providers';
+
+interface Props {
+  provider: ProviderDefinition;
+  intent?: 'login' | 'link';
+}
+const { provider, intent = 'login' } = Astro.props;
+const enabled = isEnabled(provider);
+const href = `/auth/${provider.id}/login${intent === 'link' ? '?intent=link' : ''}`;
+
+const hint =
+  provider.status !== 'available'
+    ? provider.statusNote
+    : enabled
+      ? undefined
+      : 'Nicht konfiguriert';
+---
+
+{
+  enabled ? (
+    <a
+      href={href}
+      class="group flex items-center justify-between gap-3 rounded-lg border border-neutral-300 bg-white px-4 py-3 shadow-sm transition hover:border-unibe hover:shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-unibe"
+    >
+      <span>
+        <span class="block font-medium">
+          {intent === 'link' ? `${provider.label} verbinden` : `Mit ${provider.label} anmelden`}
+        </span>
+        <span class="block text-xs text-neutral-500">{provider.description}</span>
+      </span>
+      {provider.protocol === 'oauth2' && (
+        <span class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">OAuth 2.0</span>
+      )}
+    </a>
+  ) : (
+    <div
+      aria-disabled="true"
+      class="flex items-center justify-between gap-3 rounded-lg border border-dashed border-neutral-300 bg-neutral-100 px-4 py-3 text-neutral-500"
+    >
+      <span>
+        <span class="block font-medium">{provider.label}</span>
+        <span class="block text-xs">{provider.description}</span>
+      </span>
+      <span class="shrink-0 text-right text-[11px]">{hint}</span>
+    </div>
+  )
+}

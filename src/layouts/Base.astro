@@ -1,0 +1,65 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+const user = Astro.locals.user;
+
+const flash = await Astro.session?.get('flash');
+if (flash) Astro.session?.delete('flash');
+
+const flashStyles = {
+  success: 'border-green-300 bg-green-50 text-green-900',
+  info: 'border-sky-300 bg-sky-50 text-sky-900',
+  error: 'border-red-300 bg-red-50 text-red-900',
+} as const;
+---
+
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title} · UniBE Login-Beispiel</title>
+  </head>
+  <body class="min-h-screen bg-neutral-50 font-sans text-neutral-900 antialiased">
+    <header class="border-b-4 border-unibe bg-white">
+      <div class="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-4">
+        <a href="/" class="flex items-baseline gap-2">
+          <span class="text-lg font-bold text-unibe">UniBE</span>
+          <span class="text-sm text-neutral-600">Login-Beispiel</span>
+        </a>
+        {
+          user && (
+            <form method="post" action="/auth/logout">
+              <button
+                type="submit"
+                class="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-unibe"
+              >
+                Abmelden
+              </button>
+            </form>
+          )
+        }
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-4xl px-4 py-8">
+      {
+        flash && (
+          <div role="status" class:list={['mb-6 rounded-md border px-4 py-3 text-sm', flashStyles[flash.kind]]}>
+            {flash.message}
+          </div>
+        )
+      }
+      <slot />
+    </main>
+
+    <footer class="mx-auto max-w-4xl px-4 pb-8 text-xs text-neutral-500">
+      Beispielanwendung der Universität Bern zur Anbindung verschiedener Identity Provider via OIDC.
+    </footer>
+  </body>
+</html>

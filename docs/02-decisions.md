@@ -55,9 +55,21 @@ Status: **angenommen** = entschieden · **vorgeschlagen** = Vorschlag, noch zu b
 
 ## ADR-008: ORCID und Apple zusätzlich aufnehmen
 
-- **Status:** angenommen
+- **Status:** angenommen; Apple **zurückgestellt**
 - **Kontext:** ORCID ist die Standard-ID für Forschende; Apple ist neben Google und Meta der wichtigste Consumer-IdP (und für iOS-Apps faktisch Pflicht, sobald andere Social Logins angeboten werden).
-- **Entscheid:** Beide werden direkt via OIDC angebunden; Apple zusätzlich über External ID (Broker-Weg).
+- **Entscheid:** ORCID wird direkt via OIDC angebunden. Apple ist vorgesehen (direkt und über External ID), wird aber vorerst nicht aufgesetzt, da die UniBE aktuell keinen Apple-Developer-Account hat. Der Provider ist in der Registry als «zurückgestellt» hinterlegt und wird auf der Login-Seite entsprechend angezeigt.
+
+## ADR-012: Meta zurückgestellt
+
+- **Status:** angenommen
+- **Kontext:** Für Facebook Login (direkt wie auch über External ID) ist eine Meta-App unter einem Meta-Business-Account nötig. Ein solcher besteht aktuell nicht.
+- **Entscheid:** Meta wird vorerst nicht aufgesetzt; in der Registry als «zurückgestellt» hinterlegt. [ADR-004](#adr-004-oauth-20-für-github-und-meta-explizit-kennzeichnen) gilt weiterhin, sobald Meta umgesetzt wird.
+
+## ADR-013: Domain `login-example.campus.cloud`
+
+- **Status:** angenommen
+- **Entscheid:** Die Anwendung läuft unter `https://login-example.campus.cloud`.
+- **Konsequenzen:** Redirect-URIs lauten `https://login-example.campus.cloud/auth/{provider}/callback`. Die Domain ist zugleich die WebAuthn-RP-ID für app-eigene Passkeys.
 
 ## ADR-009: Passkeys umsetzen – app-eigen und über IdPs
 
@@ -68,11 +80,13 @@ Status: **angenommen** = entschieden · **vorgeschlagen** = Vorschlag, noch zu b
 
 ## ADR-010: openid-client als einzige Auth-Bibliothek
 
-- **Status:** vorgeschlagen
+- **Status:** angenommen (im Grundgerüst umgesetzt)
 - **Kontext:** Alternativen: Auth.js (`auth-astro`) oder Arctic. Auth.js bringt eigenes Account-Linking-Verhalten mit, das wir explizit steuern wollen; Arctic ist schlank, deckt aber keine generische OIDC-Discovery/Validierung ab.
 - **Entscheid:** `openid-client` (v6) für alle Provider – OIDC via Discovery, GitHub/Meta mit manuell konfigurierten Endpunkten. Linking-Logik und Datenmodell bleiben vollständig in unserem Code und damit als Beispiel nachvollziehbar.
 
-## ADR-011: Hosting auf Azure Container Apps, Daten in Azure SQL (Free Offer)
+## ADR-011: Hosting auf Azure Container Apps (immer an), Daten in Azure SQL Basic
 
-- **Status:** vorgeschlagen – Details und Alternativen in [06](06-hosting-and-data.md)
-- **Entscheid:** Container Apps (Consumption, Scale-to-Zero) in Switzerland North; Azure SQL Database serverless im kostenlosen Angebot; Secrets in Key Vault.
+- **Status:** angenommen – Details, Kosten und verworfene Varianten in [06](06-hosting-and-data.md)
+- **Kontext:** Kostengünstig, aber ohne Wartezeit beim ersten Aufruf, da die Seite vorgeführt wird.
+- **Entscheid:** Container Apps (Consumption) in Switzerland North mit einer immer laufenden Instanz (kein Scale-to-Zero); Azure SQL Database Basic (kein Auto-Pause); Secrets in Key Vault.
+- **Konsequenz:** ca. CHF 10 pro Monat statt ca. CHF 0–2 mit Scale-to-Zero.

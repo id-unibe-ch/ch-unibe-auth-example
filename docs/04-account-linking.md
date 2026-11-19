@@ -107,7 +107,7 @@ sequenceDiagram
 
 - **Registrierung:** nur für eingeloggte Benutzer:innen im Profil («Passkey hinzufügen»). Damit ist ein Passkey immer an ein bestehendes Konto gebunden.
 - **Anmeldung:** Button «Mit Passkey anmelden» auf der Login-Seite, Discoverable Credentials (Resident Keys) und Conditional UI (Autofill), `userVerification: required`.
-- **RP-ID:** die produktive Domain (z. B. `auth-example.unibe.ch`, offen) – Passkeys sind an diese Domain gebunden; Testumgebungen brauchen eigene Passkeys.
+- **RP-ID:** `login-example.campus.cloud` – Passkeys sind an diese Domain gebunden; Testumgebungen (z. B. `localhost`) brauchen eigene Passkeys.
 - **Bibliothek:** `@simplewebauthn/server` und `@simplewebauthn/browser`.
 - **Verwaltung:** Passkeys im Profil auflisten, umbenennen, löschen.
 
