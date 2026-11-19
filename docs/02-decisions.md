@@ -121,6 +121,9 @@ When a decision changes, add a new entry and mark the superseded one rather than
 
 ## ADR-017: Bilingual user interface (German and English)
 
-- **Status:** accepted; the visual design is **proposed** (mockups under review)
+- **Status:** accepted
 - **Decision:** The user interface is offered in German and English, with a language switch in the header. Supersedes the "UI German for now" part of [ADR-016](#adr-016-english-throughout-the-repository).
 - **Design direction:** dark mode by default with a light option, Tailwind's zinc greys and the emerald palette as the accent, the providers' logos on the sign-in buttons. The official logos and button rules come from each provider's brand guidelines (Google, Microsoft, GitHub, ORCID, SWITCH).
+- **Sign-in page:** the providers are grouped by audience – a prominent UniBE button, then "universities & research" (SWITCH edu-ID, ORCID), "other accounts" (Microsoft, Google, GitHub, email code via External ID), the passkey button and "coming soon" (AGOV, Apple, Meta).
+- **Guided sign-in as a second way in:** a link "Help me choose" on the sign-in page leads to a guided page ("Who are you?" → a recommended method plus alternatives), which links back to the full list.
+- **No "how it works" page in the header.** The difference between the direct and the broker path is explained in the profile's technical details instead.
