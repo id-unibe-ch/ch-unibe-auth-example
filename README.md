@@ -111,4 +111,4 @@ infra/                   Bicep template, parameters, SQL grants for the managed 
 
 ## Language
 
-Everything in this repository is English. The user interface is German for now ([ADR-016](docs/02-decisions.md)).
+Everything in this repository is English. The user interface is offered in German and English ([ADR-017](docs/02-decisions.md)).

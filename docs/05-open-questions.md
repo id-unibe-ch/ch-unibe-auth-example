@@ -11,8 +11,7 @@
 | 7 | Linking | Should signing in with a new provider show a hint ("Already have an account? Sign in first and link this account in your profile")? | – | hint on the sign-in page implemented, to be confirmed |
 | 8 | Data protection | Which claims may be stored; retention period; automatic deletion of inactive demo accounts (e.g. after 90 days); privacy notice on the site. | – | open |
 | 9 | Audience | Is the site public (anyone can sign in) or reachable internally only? | – | open |
-| 10 | Language | Is the user interface German only, or bilingual German/English (i18n)? | – | open |
-| 11 | Apple/Meta | Who could apply for an Apple Developer or Meta Business account for UniBE, should these methods be shown later? | – | open |
+| 10 | Apple/Meta | Who could apply for an Apple Developer or Meta Business account for UniBE, should these methods be shown later? | – | open |
 
 ## Resolved
 
@@ -30,4 +29,5 @@
 | Hosting and costs | Container Apps always on + Azure SQL Basic, about CHF 10/month ([ADR-011](02-decisions.md)) |
 | Data access | `mssql` with SQL migrations, no ORM ([ADR-014](02-decisions.md)) |
 | Infrastructure and CI/CD | Bicep, GitHub Actions with OIDC federation, image in GHCR, Key Vault filled from GitHub secrets ([ADR-015](02-decisions.md), [08](08-deployment.md)) |
-| Repository language | English throughout, UI German for now ([ADR-016](02-decisions.md)) |
+| Repository language | English throughout ([ADR-016](02-decisions.md)) |
+| UI language | German and English, dark mode with emerald accent by default ([ADR-017](02-decisions.md)) |

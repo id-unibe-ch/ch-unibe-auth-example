@@ -31,4 +31,4 @@ Users land directly on the sign-in page, sign in with one of the offered methods
 
 ## Language
 
-Everything in this repository is English – code, comments, documentation, commit messages. The one exception is the text of the user interface, which is German for now; whether the site becomes bilingual is an [open question](05-open-questions.md).
+Everything in this repository is English – code, comments, documentation, commit messages. The user interface is offered in German and English ([ADR-017](02-decisions.md)).

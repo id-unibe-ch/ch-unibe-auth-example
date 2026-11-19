@@ -117,3 +117,10 @@ When a decision changes, add a new entry and mark the superseded one rather than
 
 - **Status:** accepted
 - **Decision:** Code, comments, documentation, workflow and resource descriptions, and commit messages are English, as in `ch-unibe-learning-astro`. The user interface stays German for now; bilingual UI is an open question.
+- **Superseded in part by [ADR-017](#adr-017-bilingual-user-interface-german-and-english)** for the user interface.
+
+## ADR-017: Bilingual user interface (German and English)
+
+- **Status:** accepted; the visual design is **proposed** (mockups under review)
+- **Decision:** The user interface is offered in German and English, with a language switch in the header. Supersedes the "UI German for now" part of [ADR-016](#adr-016-english-throughout-the-repository).
+- **Design direction:** dark mode by default with a light option, Tailwind's zinc greys and the emerald palette as the accent, the providers' logos on the sign-in buttons. The official logos and button rules come from each provider's brand guidelines (Google, Microsoft, GitHub, ORCID, SWITCH).
