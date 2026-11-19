@@ -15,9 +15,9 @@ Client-ID und Secret kommen in die Umgebungsvariablen (lokal `.env`, produktiv K
 
 | # | Wo | `{provider}` | Umgebungsvariablen | Status |
 |---|---|---|---|---|
-| 1 | UniBE-Tenant (unibe365) | `unibe` | `ENTRA_UNIBE_CLIENT_ID`, `ENTRA_UNIBE_CLIENT_SECRET` | ☐ |
-| 2 | UniBE-Tenant (unibe365) | `microsoft` | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | ☐ |
-| 3 | External ID `unibeeid` | `external-id` | `EXTERNAL_ID_CLIENT_ID`, `EXTERNAL_ID_CLIENT_SECRET` | ☐ |
+| 1 | UniBE-Tenant (unibe365) | `unibe` | `ENTRA_UNIBE_CLIENT_ID`, `ENTRA_UNIBE_CLIENT_SECRET` | ☑ registriert |
+| 2 | UniBE-Tenant (unibe365) | `microsoft` | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | ☑ registriert |
+| 3 | External ID `unibeeid` | `external-id` | `EXTERNAL_ID_CLIENT_ID`, `EXTERNAL_ID_CLIENT_SECRET` | ☑ registriert, User Flow offen |
 | 4 | SWITCH Resource Registry | `switch` | `SWITCH_CLIENT_ID`, `SWITCH_CLIENT_SECRET` | ☐ |
 | 5 | ORCID Developer Tools | `orcid` | `ORCID_CLIENT_ID`, `ORCID_CLIENT_SECRET` (`ORCID_ISSUER` für die Sandbox) | ☐ |
 | 6 | Google Cloud Console | `google` | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | ☐ |
@@ -30,6 +30,8 @@ Client-ID und Secret kommen in die Umgebungsvariablen (lokal `.env`, produktiv K
 
 ## 1. Entra ID – UniBE-Tenant (`unibe`)
 
+> **Registriert:** «UniBE - IDCI - Auth Example App (UniBE)» – Client-ID `22c30b53-85f0-4da8-b68b-8c0c2340904a`
+
 - [ ] Entra Admin Center → App registrations → New registration, im Tenant `unibe.ch` (`d400387a-212f-43ea-ac7f-77aa12d7977e`)
 - [ ] Unterstützte Kontotypen: **Nur Konten in diesem Organisationsverzeichnis** (Single-Tenant)
 - [ ] Plattform **Web** (nicht SPA), Redirect-URIs:
@@ -40,6 +42,8 @@ Client-ID und Secret kommen in die Umgebungsvariablen (lokal `.env`, produktiv K
 - [ ] Optional: Token-Konfiguration → optionaler Claim `email`; Gruppen-/Rollen-Claims je nach [offener Frage 5](05-open-questions.md)
 
 ## 2. Microsoft – persönliche Konten + alle Tenants (`microsoft`)
+
+> **Registriert:** «UniBE - IDCI - Auth Example App (All Tenants)» – Client-ID `b048dae9-05c7-4e86-a5c2-ac955c3c26bf`
 
 - [ ] Neue Registrierung im UniBE-Tenant (eigene App, nicht dieselbe wie Nr. 1)
 - [ ] Unterstützte Kontotypen: **Konten in einem beliebigen Organisationsverzeichnis und persönliche Microsoft-Konten**
@@ -53,6 +57,8 @@ Client-ID und Secret kommen in die Umgebungsvariablen (lokal `.env`, produktiv K
 
 ## 3. Entra External ID (`external-id`)
 
+> **Registriert:** «UniBE - IDCI - Auth Example App (eID)» – Client-ID `20bf5a5b-79a0-40e2-abcb-828224942804`
+
 - [ ] Im External Tenant `unibeeid.onmicrosoft.com` (`a791c572-76d6-4480-83df-b81dcdb92f69`) → App registrations → New registration
 - [ ] Unterstützte Kontotypen: **Nur Konten in diesem Organisationsverzeichnis**
 - [ ] Plattform **Web**, Redirect-URIs:
@@ -60,6 +66,7 @@ Client-ID und Secret kommen in die Umgebungsvariablen (lokal `.env`, produktiv K
   - [ ] `http://localhost:4321/auth/external-id/callback`
 - [ ] API-Berechtigungen: `openid`, `profile`, `email`; Admin-Zustimmung erteilen
 - [ ] Client Secret erstellen, Ablaufdatum notieren
+- [ ] **Voraussetzung:** External Tenant mit einer Azure-Subscription verknüpft (Home → Billing). Keine Kreditkarte nötig, wenn eine bestehende UniBE-Subscription verknüpft wird. Die ersten 50 000 monatlich aktiven Benutzer:innen sind kostenlos, Add-ons (z. B. SMS-MFA) nicht.
 - [ ] User Flow «Registrieren und anmelden» anlegen bzw. bestehenden wählen und **die App dem User Flow zuweisen**
 - [ ] Anmeldemethoden im User Flow festlegen (E-Mail-Einmalcode, Google, ggf. Passkeys – siehe [offene Frage 2](05-open-questions.md))
 - [ ] Optional: Company Branding für die Anmeldeseite
