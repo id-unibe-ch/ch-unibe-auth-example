@@ -27,7 +27,7 @@ Client-ID und Secret der gewünschten Provider in `.env` eintragen. Provider ohn
 npm run dev
 ```
 
-Die App läuft unter http://localhost:4321. Redirect-URI pro Provider (bei der App-Registrierung eintragen):
+Die App läuft unter http://localhost:4321. Redirect-URI pro Provider (bei der App-Registrierung eintragen, Details in [`docs/07-app-registrations.md`](docs/07-app-registrations.md)):
 
 ```
 {APP_BASE_URL}/auth/{provider}/callback
