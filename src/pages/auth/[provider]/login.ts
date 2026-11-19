@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { startAuthorization } from '../../../lib/auth';
 import { getProvider, isEnabled } from '../../../lib/providers';
 
-/** Startet Anmeldung (?intent=login) oder Verknüpfung (?intent=link) bei einem Provider. */
+/** Starts a sign-in (?intent=login) or a link (?intent=link) at a provider. */
 export const GET: APIRoute = async ({ params, url, locals, session, redirect }) => {
   const provider = getProvider(params.provider);
   if (!provider || !isEnabled(provider)) {
@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ params, url, locals, session, redirect }) 
     session?.set('authTx', tx);
     return redirect(target.href);
   } catch (err) {
-    console.error(`[auth] Start bei ${provider.id} fehlgeschlagen`, err);
+    console.error(`[auth] starting ${provider.id} failed`, err);
     session?.set('flash', {
       kind: 'error',
       message: `Die Anmeldung bei ${provider.label} konnte nicht gestartet werden.`,

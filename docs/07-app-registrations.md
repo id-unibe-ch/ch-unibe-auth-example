@@ -1,117 +1,117 @@
-# 07 – Checkliste App-Registrierungen
+# 07 – Checklist: app registrations
 
-Pro Anbieter eine Registrierung. Die Redirect-URI hat immer die Form:
+One registration per provider. The redirect URI always has the form:
 
 ```
-{Basis-URL}/auth/{provider}/callback
+{base URL}/auth/{provider}/callback
 ```
 
-- **Produktiv:** `https://login-example.campus.cloud`
-- **Entwicklung:** `http://localhost:4321`
+- **Production:** `https://login-example.campus.cloud`
+- **Development:** `http://localhost:4321`
 
-Client-ID und Secret kommen in die Umgebungsvariablen (lokal `.env`, produktiv Key Vault), siehe `.env.example`.
+Client id and secret go into the environment variables (locally `.env`, in production Key Vault via [`secrets.yml`](08-deployment.md)), see `.env.example`.
 
-## Übersicht
+## Overview
 
-| # | Wo | `{provider}` | Umgebungsvariablen | Status |
+| # | Where | `{provider}` | Environment variables | Status |
 |---|---|---|---|---|
-| 1 | UniBE-Tenant (unibe365) | `unibe` | `ENTRA_UNIBE_CLIENT_ID`, `ENTRA_UNIBE_CLIENT_SECRET` | ☑ registriert |
-| 2 | UniBE-Tenant (unibe365) | `microsoft` | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | ☑ registriert |
-| 3 | External ID `unibeeid` | `external-id` | `EXTERNAL_ID_CLIENT_ID`, `EXTERNAL_ID_CLIENT_SECRET` | ☑ registriert, User Flow angelegt |
+| 1 | UniBE tenant (unibe365) | `unibe` | `ENTRA_UNIBE_CLIENT_ID`, `ENTRA_UNIBE_CLIENT_SECRET` | ☑ registered |
+| 2 | UniBE tenant (unibe365) | `microsoft` | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | ☑ registered |
+| 3 | External ID `unibeeid` | `external-id` | `EXTERNAL_ID_CLIENT_ID`, `EXTERNAL_ID_CLIENT_SECRET` | ☑ registered, user flow created |
 | 4 | SWITCH Resource Registry | `switch` | `SWITCH_CLIENT_ID`, `SWITCH_CLIENT_SECRET` | ☐ |
-| 5 | ORCID Developer Tools | `orcid` | `ORCID_CLIENT_ID`, `ORCID_CLIENT_SECRET` (`ORCID_ISSUER` für die Sandbox) | ☐ |
+| 5 | ORCID Developer Tools | `orcid` | `ORCID_CLIENT_ID`, `ORCID_CLIENT_SECRET` (`ORCID_ISSUER` for the sandbox) | ☐ |
 | 6 | Google Cloud Console | `google` | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | ☐ |
-| 7 | GitHub-Organisation | `github` | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | ☐ |
-| 8 | Google Cloud Console (für External ID) | – | wird in `unibeeid` hinterlegt, nicht in der App | ☐ |
-| – | AGOV | `agov` | `AGOV_ISSUER`, `AGOV_CLIENT_ID`, `AGOV_CLIENT_SECRET` | Zugang offen |
-| – | Apple, Meta | – | – | zurückgestellt |
+| 7 | GitHub organisation | `github` | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` (GitHub secret: `OAUTH_GITHUB_CLIENT_SECRET`) | ☐ |
+| 8 | Google Cloud Console (for External ID) | – | stored in `unibeeid`, not in the app | ☐ |
+| – | AGOV | `agov` | `AGOV_ISSUER`, `AGOV_CLIENT_ID`, `AGOV_CLIENT_SECRET` | access open |
+| – | Apple, Meta | – | – | deferred |
 
 ---
 
-## 1. Entra ID – UniBE-Tenant (`unibe`)
+## 1. Entra ID – UniBE tenant (`unibe`)
 
-> **Registriert:** «UniBE - IDCI - Auth Example App (UniBE)» – Client-ID `22c30b53-85f0-4da8-b68b-8c0c2340904a`
+> **Registered:** "UniBE - IDCI - Auth Example App (UniBE)" – client id `22c30b53-85f0-4da8-b68b-8c0c2340904a`
 
-- [ ] Entra Admin Center → App registrations → New registration, im Tenant `unibe.ch` (`d400387a-212f-43ea-ac7f-77aa12d7977e`)
-- [ ] Unterstützte Kontotypen: **Nur Konten in diesem Organisationsverzeichnis** (Single-Tenant)
-- [ ] Plattform **Web** (nicht SPA), Redirect-URIs:
+- [x] Entra admin center → App registrations → New registration, in the tenant `unibe.ch` (`d400387a-212f-43ea-ac7f-77aa12d7977e`)
+- [x] Supported account types: **Accounts in this organizational directory only** (single tenant)
+- [ ] Platform **Web** (not SPA), redirect URIs:
   - [ ] `https://login-example.campus.cloud/auth/unibe/callback`
   - [ ] `http://localhost:4321/auth/unibe/callback`
-- [ ] API-Berechtigungen: `openid`, `profile`, `email` (Microsoft Graph, delegiert) – Standard, keine Admin-Zustimmung nötig
-- [ ] Client Secret erstellen, Ablaufdatum notieren
-- [ ] Optional: Token-Konfiguration → optionaler Claim `email`; Gruppen-/Rollen-Claims je nach [offener Frage 5](05-open-questions.md)
+- [ ] API permissions: `openid`, `profile`, `email` (Microsoft Graph, delegated) – the default, no admin consent needed
+- [ ] Create a client secret, note its expiry date
+- [ ] Optional: Token configuration → optional claim `email`; group or role claims depending on [open question 5](05-open-questions.md)
 
-## 2. Microsoft – persönliche Konten + alle Tenants (`microsoft`)
+## 2. Microsoft – personal accounts + all tenants (`microsoft`)
 
-> **Registriert:** «UniBE - IDCI - Auth Example App (All Tenants)» – Client-ID `b048dae9-05c7-4e86-a5c2-ac955c3c26bf`
+> **Registered:** "UniBE - IDCI - Auth Example App (All Tenants)" – client id `b048dae9-05c7-4e86-a5c2-ac955c3c26bf`
 
-- [ ] Neue Registrierung im UniBE-Tenant (eigene App, nicht dieselbe wie Nr. 1)
-- [ ] Unterstützte Kontotypen: **Konten in einem beliebigen Organisationsverzeichnis und persönliche Microsoft-Konten**
-- [ ] Plattform **Web**, Redirect-URIs:
+- [x] New registration in the UniBE tenant (an app of its own, not the same as no. 1)
+- [x] Supported account types: **Accounts in any organizational directory and personal Microsoft accounts**
+- [ ] Platform **Web**, redirect URIs:
   - [ ] `https://login-example.campus.cloud/auth/microsoft/callback`
   - [ ] `http://localhost:4321/auth/microsoft/callback`
-- [ ] API-Berechtigungen: `openid`, `profile`, `email`
-- [ ] Client Secret erstellen, Ablaufdatum notieren
-- [ ] Branding: Name, Logo, Links zu Nutzungsbedingungen und Datenschutz (erscheint im Zustimmungsdialog fremder Tenants)
-- [ ] Empfohlen: **Herausgeberüberprüfung** (Publisher Verification) mit der Partner-Center-ID der UniBE – sonst steht «nicht verifiziert» im Zustimmungsdialog
+- [ ] API permissions: `openid`, `profile`, `email`
+- [ ] Create a client secret, note its expiry date
+- [ ] Branding: name, logo, links to the terms of use and the privacy statement (shown in the consent dialog of foreign tenants)
+- [ ] Recommended: **publisher verification** with UniBE's Partner Center id – otherwise the consent dialog says "unverified"
 
 ## 3. Entra External ID (`external-id`)
 
-> **Registriert:** «UniBE - IDCI - Auth Example App (eID)» – Client-ID `20bf5a5b-79a0-40e2-abcb-828224942804`
+> **Registered:** "UniBE - IDCI - Auth Example App (eID)" – client id `20bf5a5b-79a0-40e2-abcb-828224942804`
 
-- [ ] Im External Tenant `unibeeid.onmicrosoft.com` (`a791c572-76d6-4480-83df-b81dcdb92f69`) → App registrations → New registration
-- [ ] Unterstützte Kontotypen: **Nur Konten in diesem Organisationsverzeichnis**
-- [ ] Plattform **Web**, Redirect-URIs:
+- [x] In the external tenant `unibeeid.onmicrosoft.com` (`a791c572-76d6-4480-83df-b81dcdb92f69`) → App registrations → New registration
+- [x] Supported account types: **Accounts in this organizational directory only**
+- [ ] Platform **Web**, redirect URIs:
   - [ ] `https://login-example.campus.cloud/auth/external-id/callback`
   - [ ] `http://localhost:4321/auth/external-id/callback`
-- [ ] API-Berechtigungen: `openid`, `profile`, `email`; Admin-Zustimmung erteilen
-- [ ] Client Secret erstellen, Ablaufdatum notieren
-- [x] **Voraussetzung:** External Tenant mit einer Azure-Subscription verknüpft (Home → Billing). Keine Kreditkarte nötig, wenn eine bestehende UniBE-Subscription verknüpft wird. Die ersten 50 000 monatlich aktiven Benutzer:innen sind kostenlos, Add-ons (z. B. SMS-MFA) nicht.
-- [x] User Flow «Registrieren und anmelden» anlegen (im **Entra Admin Center** unter Entra ID → External Identities → User flows – nicht im Azure-Portal: dort fehlt im External Tenant die Subscription, da sie im UniBE-Tenant liegt) bzw. bestehenden wählen und **die App dem User Flow zuweisen**
-- [ ] Anmeldemethoden im User Flow festlegen (E-Mail-Einmalcode, Google, ggf. Passkeys – siehe [offene Frage 2](05-open-questions.md))
-- [ ] Optional: Company Branding für die Anmeldeseite
+- [ ] API permissions: `openid`, `profile`, `email`; grant admin consent
+- [ ] Create a client secret, note its expiry date
+- [x] **Prerequisite:** the external tenant is linked to an Azure subscription (Home → Billing). No credit card needed when an existing UniBE subscription is linked. The first 50,000 monthly active users are free, add-ons (e.g. SMS MFA) are not.
+- [x] Create the "Sign up and sign in" user flow – in the **Entra admin center** under Entra ID → External Identities → User flows, *not* in the Azure portal: there the external tenant shows no subscription, because it lives in the UniBE tenant – and **assign the app to the user flow**
+- [ ] Choose the sign-in methods in the user flow (email one-time passcode, Google, passkeys if available – see [open question 2](05-open-questions.md))
+- [ ] Optional: company branding for the sign-in page
 
 ## 4. SWITCH edu-ID / SWITCHaai (`switch`)
 
-- [ ] Ressource in der SWITCH Resource Registry anlegen oder bestehende OIDC-Anbindung erweitern ([offene Frage 3](05-open-questions.md))
-- [ ] Redirect-URIs:
+- [ ] Create a resource in the SWITCH Resource Registry or extend the existing OIDC connection ([open question 3](05-open-questions.md))
+- [ ] Redirect URIs:
   - [ ] `https://login-example.campus.cloud/auth/switch/callback`
-  - [ ] `http://localhost:4321/auth/switch/callback` (falls von SWITCH zugelassen; sonst separate Test-Ressource)
-- [ ] Keys and Secrets: Credential Type **Shared client secret**, Token Endpoint Method **Client Secret Post** (die App sendet das Secret im POST-Body, Standard von `openid-client`)
-- [ ] Attributfreigaben beantragen (z. B. Name, E-Mail, `swissEduPersonUniqueID`, Affiliation)
-- [ ] Client-ID und Secret übernehmen
+  - [ ] `http://localhost:4321/auth/switch/callback` (if SWITCH allows it; otherwise a separate test resource)
+- [ ] Keys and Secrets: credential type **Shared client secret**, token endpoint method **Client Secret Post** (the app sends the secret in the POST body, `openid-client`'s default)
+- [ ] Request attribute releases (e.g. name, email, `swissEduPersonUniqueID`, affiliation)
+- [ ] Take over client id and secret
 
 ## 5. ORCID (`orcid`)
 
-- [ ] Für Tests: Sandbox-Konto auf `sandbox.orcid.org` → Developer Tools → Public API Credentials; `ORCID_ISSUER=https://sandbox.orcid.org`
-- [ ] Produktiv: Public API Credentials auf `orcid.org` (ORCID iD der verantwortlichen Person nötig)
-- [ ] Redirect-URI: `https://login-example.campus.cloud/auth/orcid/callback` (ORCID verlangt HTTPS – ob die Sandbox `localhost` akzeptiert, ist noch zu prüfen)
-- [ ] Client-ID und Secret übernehmen
+- [ ] For tests: a sandbox account at `sandbox.orcid.org` → Developer Tools → Public API credentials; `ORCID_ISSUER=https://sandbox.orcid.org`
+- [ ] Production: public API credentials at `orcid.org` (needs the ORCID iD of the person responsible)
+- [ ] Redirect URI: `https://login-example.campus.cloud/auth/orcid/callback` (ORCID requires HTTPS – whether the sandbox accepts `localhost` is still to be checked)
+- [ ] Take over client id and secret
 
-## 6. Google – direkt (`google`)
+## 6. Google – direct (`google`)
 
-- [ ] Google Cloud Console → Projekt anlegen (z. B. «UniBE Login-Beispiel»)
-- [ ] OAuth-Zustimmungsbildschirm: Typ **Extern**, App-Name, Support-E-Mail, autorisierte Domain `campus.cloud`, Links zu Datenschutz/Nutzungsbedingungen
-- [ ] Scopes: `openid`, `email`, `profile` (nicht sensibel, keine Google-Verifizierung nötig)
-- [ ] Anmeldedaten → OAuth-Client-ID, Typ **Webanwendung**, autorisierte Weiterleitungs-URIs:
+- [ ] Google Cloud Console → create a project (e.g. "UniBE Login Example")
+- [ ] OAuth consent screen: type **External**, app name, support email, authorised domain `campus.cloud`, links to the privacy statement and terms of use
+- [ ] Scopes: `openid`, `email`, `profile` (not sensitive, no Google verification needed)
+- [ ] Credentials → OAuth client id, type **Web application**, authorised redirect URIs:
   - [ ] `https://login-example.campus.cloud/auth/google/callback`
   - [ ] `http://localhost:4321/auth/google/callback`
-- [ ] App veröffentlichen («In Produktion»), sonst können sich nur eingetragene Testbenutzer anmelden
+- [ ] Publish the app ("In production"), otherwise only listed test users can sign in
 
 ## 7. GitHub (`github`)
 
-- [ ] GitHub-Organisation → Settings → Developer settings → **OAuth Apps** → New OAuth App ([offene Frage 4](05-open-questions.md))
-- [ ] Homepage-URL: `https://login-example.campus.cloud`
+- [ ] GitHub organisation → Settings → Developer settings → **OAuth Apps** → New OAuth App ([open question 4](05-open-questions.md))
+- [ ] Homepage URL: `https://login-example.campus.cloud`
 - [ ] Authorization callback URL: `https://login-example.campus.cloud/auth/github/callback`
-- [ ] Eine OAuth App erlaubt nur **eine** Callback-URL → zweite OAuth App für die Entwicklung mit `http://localhost:4321/auth/github/callback`
-- [ ] Client Secret erstellen
+- [ ] An OAuth App allows only **one** callback URL → a second OAuth App for development with `http://localhost:4321/auth/github/callback`
+- [ ] Create a client secret; as a GitHub Actions secret it is called `OAUTH_GITHUB_CLIENT_SECRET` (GitHub refuses names starting with `GITHUB_`)
 
-## 8. Google für External ID (Broker-Weg)
+## 8. Google for External ID (broker path)
 
-Ein **zweiter** OAuth-Client, getrennt von Nr. 6 – er gehört zu `unibeeid`, nicht zu unserer App. Quelle: Microsoft Learn, [Add Google as an identity provider](https://learn.microsoft.com/entra/external-id/customers/how-to-google-federation-customers).
+A **second** OAuth client, separate from no. 6 – it belongs to `unibeeid`, not to our app. Source: Microsoft Learn, [Add Google as an identity provider](https://learn.microsoft.com/entra/external-id/customers/how-to-google-federation-customers).
 
-- [ ] Im selben oder einem eigenen Google-Cloud-Projekt; autorisierte Domains `ciamlogin.com` und `microsoftonline.com` ergänzen
-- [ ] OAuth-Client-ID, Typ **Webanwendung**, autorisierte Weiterleitungs-URIs:
+- [ ] In the same or a separate Google Cloud project; add the authorised domains `ciamlogin.com` and `microsoftonline.com`
+- [ ] OAuth client id, type **Web application**, authorised redirect URIs:
   - [ ] `https://login.microsoftonline.com`
   - [ ] `https://login.microsoftonline.com/te/a791c572-76d6-4480-83df-b81dcdb92f69/oauth2/authresp`
   - [ ] `https://login.microsoftonline.com/te/unibeeid.onmicrosoft.com/oauth2/authresp`
@@ -119,14 +119,15 @@ Ein **zweiter** OAuth-Client, getrennt von Nr. 6 – er gehört zu `unibeeid`, n
   - [ ] `https://a791c572-76d6-4480-83df-b81dcdb92f69.ciamlogin.com/unibeeid.onmicrosoft.com/federation/oidc/accounts.google.com`
   - [ ] `https://unibeeid.ciamlogin.com/a791c572-76d6-4480-83df-b81dcdb92f69/federation/oauth2`
   - [ ] `https://unibeeid.ciamlogin.com/unibeeid.onmicrosoft.com/federation/oauth2`
-- [ ] In `unibeeid`: External Identities → All identity providers → Google → Configure, Client-ID und Secret eintragen
-- [ ] Google dem User Flow aus Nr. 3 hinzufügen
+- [ ] In `unibeeid`: External Identities → All identity providers → Google → Configure, enter client id and secret
+- [ ] Add Google to the user flow of no. 3
 
 ---
 
-## Nach jeder Registrierung
+## After every registration
 
-- [ ] Client-ID und Secret in `.env` (lokal) bzw. Key Vault (produktiv) eintragen
-- [ ] Ablaufdatum des Secrets im Betriebskalender erfassen (Entra: max. 24 Monate)
-- [ ] Login und «Account verbinden» auf der Seite testen
-- [ ] Status in der Übersicht oben und in [03](03-identity-providers.md) nachführen
+- [ ] Put client id and secret into `.env` (locally) and the secret into the GitHub secrets, then run `secrets.yml` (production)
+- [ ] Add the provider to `identityProviders` in `infra/main.bicepparam`
+- [ ] Record the secret's expiry date in the operations calendar (Entra: at most 24 months)
+- [ ] Test sign-in and "link account" on the site
+- [ ] Update the status in the overview above and in [03](03-identity-providers.md)

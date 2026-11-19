@@ -30,7 +30,7 @@ function toIdentity(r: IdentityRow): Identity {
   };
 }
 
-/** Parameter einer neuen Identität an einen Request binden. */
+/** Binds the parameters of a new identity to a request. */
 function bindIdentity(req: sql.Request, userId: string, provider: string, p: ProviderProfile) {
   return req
     .input('id', sql.UniqueIdentifier, randomUUID())
@@ -129,7 +129,7 @@ export class SqlUserStore implements UserStore {
       await bindIdentity(pool.request(), userId, provider, profile).query(INSERT_IDENTITY);
       return 'linked';
     } catch (err) {
-      // Gleichzeitige Verknüpfung derselben Identität: der UNIQUE-Constraint entscheidet.
+      // Concurrent link of the same identity: the UNIQUE constraint decides.
       if (isUniqueViolation(err)) {
         return (await this.findUserIdByIdentity(profile.issuer, profile.subject)) === userId
           ? 'already-linked'
@@ -141,8 +141,8 @@ export class SqlUserStore implements UserStore {
 
   async unlinkIdentity(userId: string, identityId: string): Promise<UnlinkResult> {
     const pool = await getPool();
-    // Atomar: nur löschen, wenn danach noch mindestens eine Identität übrig bleibt.
-    // Später zusätzlich Passkeys berücksichtigen.
+    // Atomic: delete only if at least one identity remains afterwards.
+    // Later also count passkeys.
     const res = await pool
       .request()
       .input('user_id', sql.UniqueIdentifier, userId)
@@ -163,7 +163,7 @@ export class SqlUserStore implements UserStore {
 
   async deleteUser(userId: string) {
     const pool = await getPool();
-    // Identitäten werden über ON DELETE CASCADE mitgelöscht.
+    // Identities go with it through ON DELETE CASCADE.
     await pool.request().input('id', sql.UniqueIdentifier, userId).query('DELETE FROM dbo.users WHERE id = @id');
   }
 }

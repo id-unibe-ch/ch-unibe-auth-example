@@ -1,67 +1,69 @@
-# 06 – Hosting und Datenhaltung (Azure)
+# 06 – Hosting and data (Azure)
 
-Vorgabe: Hosting in Azure, möglichst kostengünstig, ohne Wartezeit beim ersten Aufruf. Status: **angenommen** ([ADR-011](02-decisions.md)).
+Requirement: hosted in Azure, as cheap as possible, without a wait on the first request. Status: **accepted** ([ADR-011](02-decisions.md)).
 
-> Preise: Azure-Retail-Preisliste in CHF für Switzerland North, Listenpreise ohne Rabatte, abgefragt am 19.11.2026. Die Sekundenpreise von Container Apps rundet die CHF-Liste auf 0; sie sind aus den USD-Listenpreisen umgerechnet und daher Richtwerte.
+> Prices: Azure retail price list in CHF for Switzerland North, list prices without discounts, retrieved on 19 November 2026. The CHF list rounds the per-second prices of Container Apps to 0; those are converted from the USD list prices and are therefore estimates.
 
-## Entscheid
+## Decision
 
-| Baustein | Dienst | Konfiguration | Kosten/Monat (Richtwert) |
+| Building block | Service | Configuration | Cost per month (estimate) |
 |---|---|---|---|
-| App | **Azure Container Apps** (Consumption) | 0.25 vCPU / 0.5 GiB, `minReplicas: 1`, `maxReplicas: 1` (siehe Sessions) | ≈ CHF 4 (meist untätig), max. ≈ CHF 12 |
-| Datenbank | **Azure SQL Database Basic** | 5 DTU, 2 GB, kein Auto-Pause | ≈ CHF 4.50 |
-| Secrets | **Azure Key Vault** (Standard) | Client Secrets, Session-Secret; Zugriff via Managed Identity | wenige Rappen |
-| Images | **GitHub Container Registry** | alternativ ACR Basic (≈ CHF 5) | 0 |
-| Logs | **Log Analytics** | tiefe Aufbewahrung, Tageslimit | gering |
-| Region | **Switzerland North** | Datenhaltung in der Schweiz | – |
+| App | **Azure Container Apps** (Consumption) | 0.25 vCPU / 0.5 GiB, `minReplicas: 1`, `maxReplicas: 1` | ≈ CHF 4 (mostly idle), at most ≈ CHF 12 |
+| Database | **Azure SQL Database Basic** | 5 DTU, 2 GB, no auto-pause | ≈ CHF 4.50 |
+| Secrets | **Azure Key Vault** (Standard) | Client secrets; access through managed identity | a few cents |
+| Images | **GitHub Container Registry** | public package; alternatively ACR Basic (≈ CHF 5) | 0 |
+| Logs | **Log Analytics** | 30 days' retention, daily cap 0.2 GB | small |
+| Region | **Switzerland North** | Data stays in Switzerland | – |
 
-**Erwartete Gesamtkosten: ca. CHF 9–17 pro Monat**, realistisch rund CHF 10.
+**Expected total: about CHF 9–17 a month**, realistically around CHF 10.
 
-### Warum ohne Scale-to-Zero
+### Why no scale to zero
 
-Die Seite wird vorgeführt; niemand soll auf das Aufwachen von App (einige Sekunden) und Datenbank (bis ca. 1 Minute) warten. Der Aufpreis gegenüber Scale-to-Zero beträgt nur rund CHF 10 pro Monat.
+The site is demonstrated; nobody should wait for the app (a few seconds) and the database (up to about a minute) to wake up. Compared with scale to zero, it costs only about CHF 10 a month more.
 
-### Bemerkungen
+### Notes
 
-- Container Apps verrechnet eine laufende, aber untätige Instanz zu einem stark reduzierten Satz. Bei einer Demo-Seite ist das der Normalfall.
-- Das monatliche Gratiskontingent von Container Apps gilt pro Subscription. Ist es durch andere Apps aufgebraucht, kommen ca. CHF 3–4 dazu.
-- Die Health-Probe (`/healthz`) fragt bewusst keine Datenbank ab.
+- Container Apps bills a running but idle instance at a much lower rate. For a demo site that is the normal case.
+- The monthly free grant of Container Apps applies per subscription. If other apps have used it up, add about CHF 3–4.
+- The health probe (`/healthz`) deliberately does not query the database.
 
 ## Sessions
 
-Astro Sessions mit eigenem Treiber auf Azure SQL (`src/lib/session-driver.ts`, Tabelle `dbo.sessions`). Sessions überstehen Neustarts und Deployments; mehrere Instanzen sind möglich. Kein Redis nötig.
+Astro sessions with a driver of our own on Azure SQL (`src/lib/session-driver.ts`, table `dbo.sessions`). Sessions survive restarts and deployments; several instances are possible. No Redis needed.
 
-Ohne Datenbank-Konfiguration fällt der Treiber auf einen In-Memory-Speicher zurück (nur für die Entwicklung).
+Without a database configuration, the driver falls back to an in-memory store (development only).
 
-## Datenbank einrichten (Azure)
+## Setting up the database (Azure)
 
-1. Azure SQL Server in Switzerland North mit **Microsoft Entra-only authentication** anlegen und eine Entra-Gruppe als Administrator setzen.
-2. Datenbank im Tarif **Basic** anlegen.
-3. Managed Identity der Container App als Datenbankbenutzer anlegen (als Entra-Administrator verbunden):
+The Bicep template ([08](08-deployment.md)) creates server and database. What is left by hand:
+
+1. The Azure SQL server accepts **Microsoft Entra authentication only**; an Entra group is its administrator.
+2. Create the managed identities as database users, connected as a member of that group – [`infra/sql/grant-identities.sql`](../infra/sql/grant-identities.sql):
 
    ```sql
-   CREATE USER [<name-der-managed-identity>] FROM EXTERNAL PROVIDER;
-   ALTER ROLE db_datareader ADD MEMBER [<name-der-managed-identity>];
-   ALTER ROLE db_datawriter ADD MEMBER [<name-der-managed-identity>];
+   CREATE USER [id-authex-app] FROM EXTERNAL PROVIDER;
+   ALTER ROLE db_datareader ADD MEMBER [id-authex-app];
+   ALTER ROLE db_datawriter ADD MEMBER [id-authex-app];
    ```
 
-4. Migrationen mit einer Identität mit DDL-Rechten anwenden (z. B. CI/CD-Pipeline oder Administrator): `npm run db:migrate`. Das Container-Image enthält `db/` und `scripts/`, damit die Migration auch als Container-Apps-Job laufen kann.
-5. Container App konfigurieren: `SQL_SERVER=<server>.database.windows.net`, `SQL_DATABASE=<datenbank>`, `SQL_AUTH=entra`, bei user-assigned Identity zusätzlich `AZURE_CLIENT_ID`.
+   The migration identity `id-authex-migrate` additionally gets `db_ddladmin`.
+3. Migrations run as the Container Apps job `caj-authex-migrate` (`node scripts/migrate.mjs`), started by the deploy workflow.
+4. The app is configured with `SQL_SERVER=<server>.database.windows.net`, `SQL_DATABASE=<database>`, `SQL_AUTH=entra` and `AZURE_CLIENT_ID` of its user-assigned identity – all set by the template.
 
-Die App selbst hat bewusst keine DDL-Rechte.
+The app itself deliberately has no DDL rights.
 
-## Verworfene Varianten
+## Rejected options
 
-| Variante | Kosten/Monat | Grund |
+| Option | Cost per month | Reason |
 |---|---|---|
-| Alles mit Scale-to-Zero (Container Apps + SQL Free Offer mit Auto-Pause) | ≈ CHF 0–2 | Wartezeiten bis ca. 1 Minute beim ersten Aufruf |
-| Azure SQL Free Offer ohne Auto-Pause | ≈ CHF 175 | Gratiskontingent nach rund einem Tag aufgebraucht, danach serverless-Stundenpreis (CHF 0.52 pro vCore-Stunde, min. 0.5 vCore) |
-| Azure SQL Standard S0 | ≈ CHF 13.50 | Leistung von Basic genügt |
-| App Service B1 Linux | ≈ CHF 12 | vergleichbar, aber Container Apps ist flexibler und im Leerlauf günstiger |
-| Azure Table Storage | < CHF 1 | kein relationales Modell; SQL ist in der UniBE verbreiteter und als Beispiel übertragbarer |
-| Cosmos DB Free Tier | 0 | nur ein Free-Tier-Konto pro Subscription, Unique Keys nur pro Partition |
-| PostgreSQL Flexible Server B1ms | ≈ CHF 15–20 | teurer ohne Mehrwert für diesen Zweck |
+| Everything scaling to zero (Container Apps + SQL free offer with auto-pause) | ≈ CHF 0–2 | Waits of up to about a minute on the first request |
+| Azure SQL free offer without auto-pause | ≈ CHF 175 | Free grant used up after about a day, then the serverless hourly price (CHF 0.52 per vCore hour, min. 0.5 vCore) |
+| Azure SQL Standard S0 | ≈ CHF 13.50 | Basic is enough |
+| App Service B1 Linux | ≈ CHF 12 | Comparable, but Container Apps is more flexible and cheaper while idle |
+| Azure Table Storage | < CHF 1 | No relational model; SQL is more common at UniBE and transfers better as an example |
+| Cosmos DB free tier | 0 | Only one free-tier account per subscription, unique keys only per partition |
+| PostgreSQL Flexible Server B1ms | ≈ CHF 15–20 | More expensive without benefit for this purpose |
 
-## Datenzugriff
+## Data access
 
-`mssql` mit parametrisiertem SQL, ohne ORM ([ADR-014](02-decisions.md)). Die Anwendung greift über die Schnittstelle `UserStore` (`src/lib/store.ts`) zu: `SqlUserStore` (`src/lib/store-sql.ts`), sobald `SQL_SERVER` und `SQL_DATABASE` gesetzt sind, sonst ein In-Memory-Speicher für die Entwicklung.
+`mssql` with parameterised SQL, no ORM ([ADR-014](02-decisions.md)). The application goes through the `UserStore` interface (`src/lib/store.ts`): `SqlUserStore` (`src/lib/store-sql.ts`) once `SQL_SERVER` and `SQL_DATABASE` are set, otherwise an in-memory store for development.

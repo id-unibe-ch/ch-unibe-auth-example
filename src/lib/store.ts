@@ -4,12 +4,12 @@ import type { ProviderProfile } from './providers';
 import { SqlUserStore } from './store-sql';
 
 /**
- * Datenzugriff für Benutzerkonten und verknüpfte Identitäten.
- * Datenmodell: docs/04-account-linking.md
+ * Data access for user accounts and linked identities.
+ * Data model: docs/04-account-linking.md
  *
- * Zwei Implementierungen:
- *   - SqlUserStore (store-sql.ts): Azure SQL, aktiv sobald SQL_SERVER und SQL_DATABASE gesetzt sind
- *   - MemoryUserStore (unten): nur für die Entwicklung ohne Datenbank, Daten gehen beim Neustart verloren
+ * Two implementations:
+ *   - SqlUserStore (store-sql.ts): Azure SQL, active once SQL_SERVER and SQL_DATABASE are set
+ *   - MemoryUserStore (below): development without a database only; data is lost on restart
  */
 
 export interface Identity {
@@ -38,7 +38,7 @@ export interface UserStore {
   getUser(userId: string): Promise<User | undefined>;
   findUserIdByIdentity(issuer: string, subject: string): Promise<string | undefined>;
   createUser(provider: string, profile: ProviderProfile): Promise<User>;
-  /** Aktualisiert Claims und letzte Anmeldung einer bestehenden Identität. */
+  /** Updates the claims and last sign-in of an existing identity. */
   recordLogin(provider: string, profile: ProviderProfile): Promise<void>;
   linkIdentity(userId: string, provider: string, profile: ProviderProfile): Promise<LinkResult>;
   unlinkIdentity(userId: string, identityId: string): Promise<UnlinkResult>;
@@ -64,7 +64,7 @@ function toIdentity(provider: string, profile: ProviderProfile): Identity {
 
 class MemoryUserStore implements UserStore {
   private users = new Map<string, User>();
-  /** Eindeutigkeit (Issuer, Subject) → userId, entspricht UNIQUE(issuer, subject). */
+  /** Uniqueness (issuer, subject) → userId, the equivalent of UNIQUE(issuer, subject). */
   private identityIndex = new Map<string, string>();
 
   async getUser(userId: string) {
@@ -108,7 +108,7 @@ class MemoryUserStore implements UserStore {
     if (owner === userId) return 'already-linked';
     if (owner) return 'conflict';
     const user = this.users.get(userId);
-    if (!user) throw new Error('Benutzer nicht gefunden');
+    if (!user) throw new Error('User not found');
     const identity = toIdentity(provider, profile);
     user.identities.push(identity);
     this.identityIndex.set(key(identity.issuer, identity.subject), userId);
@@ -119,7 +119,7 @@ class MemoryUserStore implements UserStore {
     const user = this.users.get(userId);
     const identity = user?.identities.find((i) => i.id === identityId);
     if (!user || !identity) return 'not-found';
-    // Später zusätzlich Passkeys berücksichtigen: Es muss eine Anmeldemöglichkeit bleiben.
+    // Later also count passkeys: one way to sign in has to remain.
     if (user.identities.length <= 1) return 'last-identity';
     user.identities = user.identities.filter((i) => i.id !== identityId);
     this.identityIndex.delete(key(identity.issuer, identity.subject));
@@ -134,12 +134,12 @@ class MemoryUserStore implements UserStore {
   }
 }
 
-// Auf globalThis ablegen, damit der Zustand Hot-Reloads im Dev-Server übersteht.
+// Kept on globalThis so the state survives hot reloads of the dev server.
 const g = globalThis as unknown as { __userStore?: UserStore };
 export const store: UserStore = (g.__userStore ??= isDatabaseConfigured()
   ? new SqlUserStore()
   : new MemoryUserStore());
 
 if (!isDatabaseConfigured()) {
-  console.warn('[store] Keine Datenbank konfiguriert (SQL_SERVER/SQL_DATABASE) – In-Memory-Speicher aktiv.');
+  console.warn('[store] No database configured (SQL_SERVER/SQL_DATABASE) – using the in-memory store.');
 }

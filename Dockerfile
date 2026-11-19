@@ -13,7 +13,7 @@ ENV NODE_ENV=production HOST=0.0.0.0 PORT=4321
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json ./
-# Für den Migrations-Job: node scripts/migrate.mjs
+# For the migration job: node scripts/migrate.mjs
 COPY db ./db
 COPY scripts ./scripts
 USER node

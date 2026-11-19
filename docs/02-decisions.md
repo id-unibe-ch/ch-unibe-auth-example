@@ -1,103 +1,119 @@
-# 02 – Architekturentscheide
+# 02 – Architecture decisions
 
-Status: **angenommen** = entschieden · **vorgeschlagen** = Vorschlag, noch zu bestätigen
+Status: **accepted** = decided · **proposed** = to be confirmed
+
+When a decision changes, add a new entry and mark the superseded one rather than editing it.
 
 ---
 
-## ADR-001: Astro (SSR) als Framework
+## ADR-001: Astro (SSR) as the framework
 
-- **Status:** angenommen
-- **Kontext:** Astro ist in mehreren UniBE-Projekten im Einsatz; Know-how vorhanden.
-- **Entscheid:** Astro im Server-Modus (`output: 'server'`) mit `@astrojs/node` (standalone). SSR ist nötig für OAuth-Callbacks, Sessions und Datenbankzugriff.
-- **Konsequenz:** Die App läuft als Node-Prozess (Container), nicht als rein statische Seite.
+- **Status:** accepted
+- **Context:** Astro is used in several UniBE projects; the know-how exists.
+- **Decision:** Astro in server mode (`output: 'server'`) with `@astrojs/node` (standalone). SSR is needed for OAuth callbacks, sessions and database access.
+- **Consequence:** The app runs as a Node process (container), not as a purely static site.
 
-## ADR-002: Tailwind CSS für das Design
+## ADR-002: Tailwind CSS for the design
 
-- **Status:** angenommen
-- **Entscheid:** Tailwind CSS v4 über `@tailwindcss/vite`. Login-Buttons der Drittanbieter halten sich an deren Branding-Richtlinien (Google, Apple, Microsoft, GitHub, Meta, ORCID, SWITCH, AGOV).
+- **Status:** accepted
+- **Decision:** Tailwind CSS v4 via `@tailwindcss/vite`. Third-party sign-in buttons follow the providers' branding guidelines (Google, Apple, Microsoft, GitHub, Meta, ORCID, SWITCH, AGOV).
 
-## ADR-003: Beide Anbindungswege (direkt und Broker) zeigen
+## ADR-003: Show both connection paths (direct and broker)
 
-- **Status:** angenommen
-- **Kontext:** Zwei gängige Muster: jede IdP-Anbindung in der App selbst, oder Delegation an einen Broker (Entra External ID).
-- **Entscheid:** Die Beispielseite zeigt beide Wege nebeneinander. Die Login-Seite gruppiert die Buttons entsprechend.
-- **Konsequenzen:**
-  - Derselbe Google-Account über *direkt* und über *External ID* ergibt **zwei verschiedene Identitäten** (unterschiedlicher Issuer und Subject). Das ist gewollt und wird auf der Seite erklärt – es veranschaulicht gerade den Unterschied der beiden Wege.
-  - Der Broker-Weg kapselt Nicht-OIDC-Provider (Facebook) hinter einer sauberen OIDC-Schnittstelle.
+- **Status:** accepted
+- **Context:** Two common patterns: every IdP connected in the app itself, or delegation to a broker (Entra External ID).
+- **Decision:** The example site shows both side by side. The sign-in page groups the buttons accordingly.
+- **Consequences:**
+  - The same Google account signed in *directly* and *via External ID* yields **two different identities** (different issuer and subject). This is intended and explained on the site – it illustrates exactly the difference between the two paths.
+  - The broker path hides non-OIDC providers (Facebook) behind a clean OIDC interface.
 
-## ADR-004: OAuth 2.0 für GitHub und Meta explizit kennzeichnen
+## ADR-004: Mark GitHub and Meta explicitly as OAuth 2.0
 
-- **Status:** angenommen
-- **Kontext:** GitHub liefert kein ID-Token (reines OAuth 2.0). Facebook Login im Web ist ebenfalls OAuth 2.0 (OIDC nur eingeschränkt, «Limited Login» auf iOS).
-- **Entscheid:** GitHub und Meta werden direkt als OAuth-2.0-Provider angebunden: Authorization Code + PKCE, danach Benutzerdaten über die jeweilige API (GitHub `/user` und `/user/emails`, Meta Graph API `/me`). In der UI und der Doku sind diese Provider als «OAuth 2.0» gekennzeichnet.
-- **Konsequenz:** Für diese Provider gibt es keine kryptografisch signierte Identitätsaussage; der Identitätsschlüssel ist die numerische Benutzer-ID der API.
+- **Status:** accepted
+- **Context:** GitHub issues no ID token (plain OAuth 2.0). Facebook Login on the web is OAuth 2.0 too (OIDC only in a limited form, "Limited Login" on iOS).
+- **Decision:** GitHub and Meta are connected directly as OAuth 2.0 providers: authorization code + PKCE, then the user's data from the provider's API (GitHub `/user` and `/user/emails`, Meta Graph API `/me`). The UI and the documentation label them "OAuth 2.0".
+- **Consequence:** For these providers there is no cryptographically signed identity statement; the identity key is the API's numeric user id.
 
-## ADR-005: Kein automatisches Zusammenführen von Accounts
+## ADR-005: No automatic merging of accounts
 
-- **Status:** angenommen
-- **Kontext:** Ursprünglich war ein automatischer Merge über eindeutige Attribute vorgesehen. E-Mail-Adressen sind dafür ungeeignet: Bei fremden Entra-Tenants ist das `email`-Claim vom Tenant frei setzbar und unverifiziert («nOAuth»), bei anderen Providern ist `email_verified` nicht immer vorhanden, Apple liefert ggf. Relay-Adressen.
-- **Entscheid:** Accounts werden **nur manuell** verknüpft: Der/die eingeloggte Benutzer:in startet «Account verbinden» und weist den Besitz durch eine Anmeldung beim zweiten Provider nach. Identitäten werden ausschliesslich über (Issuer, Subject) identifiziert.
-- **Konsequenz:** Wer sich mit einem neuen Provider anmeldet statt ihn zu verbinden, erhält ein neues Benutzerkonto. Die Login-Seite weist darauf hin. Umgang mit solchen Duplikaten: siehe [offene Fragen](05-open-questions.md).
+- **Status:** accepted
+- **Context:** Automatic merging by unique attributes was originally planned. Email addresses are unsuitable for it: for foreign Entra tenants the `email` claim can be set freely by the tenant and is unverified ("nOAuth"), other providers do not always send `email_verified`, and Apple may hand out relay addresses.
+- **Decision:** Accounts are linked **only by hand**: the signed-in user starts "link account" and proves ownership by signing in with the second provider. Identities are identified solely by (issuer, subject).
+- **Consequence:** Someone who signs in with a new provider instead of linking it gets a new user account. The sign-in page says so. Handling such duplicates: see the [open questions](05-open-questions.md).
 
-## ADR-006: Microsoft-Button = persönliche Konten + alle Tenants
+## ADR-006: The Microsoft button = personal accounts + all tenants
 
-- **Status:** angenommen
-- **Entscheid:** Der «Mit Microsoft anmelden»-Button verwendet den `common`-Endpunkt (persönliche Microsoft-Konten und Geschäfts-/Schulkonten aller Tenants, wie auf vielen Seiten üblich). Es wird **jeder Tenant** zugelassen. Zusätzlich gibt es einen eigenen UniBE-Button, der fest auf den UniBE-Tenant zeigt.
-- **Konsequenzen:**
-  - Issuer-Validierung muss die Tenant-ID aus dem Token einsetzen (`https://login.microsoftonline.com/{tid}/v2.0`); eine statische Issuer-Prüfung funktioniert mit `common` nicht.
-  - Persönliche Konten erkennt man an `tid = 9188040d-6c67-4c5b-b112-36a304b66dad`.
-  - Ein UniBE-Konto, das sich über den Microsoft-Button anmeldet, erzeugt denselben Identitätsschlüssel wie über den UniBE-Button und landet daher beim selben Benutzer (siehe [03](03-identity-providers.md)).
+- **Status:** accepted
+- **Decision:** The "Sign in with Microsoft" button uses the `common` endpoint (personal Microsoft accounts and work or school accounts of every tenant, as many sites do). **Every tenant** is admitted. There is also a separate UniBE button pointing at the UniBE tenant only.
+- **Consequences:**
+  - Issuer validation has to insert the tenant id from the token (`https://login.microsoftonline.com/{tid}/v2.0`); a static issuer check does not work with `common`. `openid-client` does this itself for an Entra issuer containing `{tenantid}`.
+  - Personal accounts are recognised by `tid = 9188040d-6c67-4c5b-b112-36a304b66dad`.
+  - A UniBE account signing in through the Microsoft button produces the same identity key as through the UniBE button and therefore lands at the same user (see [03](03-identity-providers.md)).
 
-## ADR-007: Kein separates eduGAIN – SWITCHaai deckt es ab
+## ADR-007: No separate eduGAIN – SWITCHaai covers it
 
-- **Status:** angenommen
-- **Entscheid:** Keine separate eduGAIN-Anbindung (SAML). Die OIDC-Anbindung über SWITCH (edu-ID / SWITCHaai) deckt den Bedarf ab.
+- **Status:** accepted
+- **Decision:** No separate eduGAIN connection (SAML). The OIDC connection through SWITCH (edu-ID / SWITCHaai) covers the need.
 
-## ADR-008: ORCID und Apple zusätzlich aufnehmen
+## ADR-008: Add ORCID and Apple
 
-- **Status:** angenommen; Apple **zurückgestellt**
-- **Kontext:** ORCID ist die Standard-ID für Forschende; Apple ist neben Google und Meta der wichtigste Consumer-IdP (und für iOS-Apps faktisch Pflicht, sobald andere Social Logins angeboten werden).
-- **Entscheid:** ORCID wird direkt via OIDC angebunden. Apple ist vorgesehen (direkt und über External ID), wird aber vorerst nicht aufgesetzt, da die UniBE aktuell keinen Apple-Developer-Account hat. Der Provider ist in der Registry als «zurückgestellt» hinterlegt und wird auf der Login-Seite entsprechend angezeigt.
+- **Status:** accepted; Apple **deferred**
+- **Context:** ORCID is the standard identifier for researchers; Apple is the most important consumer IdP next to Google and Meta (and effectively mandatory for iOS apps once other social sign-ins are offered).
+- **Decision:** ORCID is connected directly via OIDC. Apple is planned (direct and via External ID) but not set up for now, because UniBE currently has no Apple Developer account. The provider is in the registry as "deferred" and shown accordingly on the sign-in page.
 
-## ADR-014: Datenzugriff mit `mssql` und SQL-Migrationen, ohne ORM
+## ADR-009: Passkeys – the app's own and through the IdPs
 
-- **Status:** angenommen (umgesetzt)
-- **Kontext:** Für Azure SQL standen Prisma und Kysely zur Wahl. Die Anwendung braucht nur rund zehn einfache Abfragen; als Referenzimplementierung soll nachvollziehbar sein, was in der Datenbank passiert.
-- **Entscheid:** Direkter Zugriff mit dem Paket `mssql` (Treiber `tedious`) und parametrisierten SQL-Abfragen. Das Schema liegt als SQL-Dateien in `db/migrations/` und wird mit `npm run db:migrate` angewendet (Protokoll in `dbo.schema_migrations`).
-- **Konsequenzen:**
-  - Keine Code-Generierung, keine zusätzliche Abstraktionsschicht; das Schema ist direkt lesbar.
-  - Authentisierung an Azure SQL über Entra ID (Managed Identity) – kein Passwort in der Konfiguration. Lokal SQL-Login gegen SQL Server in Docker.
-  - Die Eindeutigkeit (Issuer, Subject) erzwingt die Datenbank per `UNIQUE`-Constraint; gleichzeitige Verknüpfungen derselben Identität werden dadurch korrekt als Konflikt erkannt.
-  - Astro-Sessions liegen über einen eigenen Session-Treiber in derselben Datenbank (`dbo.sessions`).
+- **Status:** accepted (details in [04](04-account-linking.md#passkeys))
+- **Decision:** Passkeys are shown on two levels:
+  1. **The app's own (WebAuthn, SimpleWebAuthn):** users can register passkeys in their profile and then sign in with a passkey directly.
+  2. **On the IdP's side:** passkey sign-in at Entra (UniBE tenant), External ID and others. The app sees only the `amr`/`acr` claims and shows them.
 
-## ADR-012: Meta zurückgestellt
+## ADR-010: openid-client as the only auth library
 
-- **Status:** angenommen
-- **Kontext:** Für Facebook Login (direkt wie auch über External ID) ist eine Meta-App unter einem Meta-Business-Account nötig. Ein solcher besteht aktuell nicht.
-- **Entscheid:** Meta wird vorerst nicht aufgesetzt; in der Registry als «zurückgestellt» hinterlegt. [ADR-004](#adr-004-oauth-20-für-github-und-meta-explizit-kennzeichnen) gilt weiterhin, sobald Meta umgesetzt wird.
+- **Status:** accepted (implemented)
+- **Context:** Alternatives: Auth.js (`auth-astro`) or Arctic. Auth.js brings its own account-linking behaviour, which we want to control explicitly; Arctic is lean but offers no generic OIDC discovery or validation.
+- **Decision:** `openid-client` (v6) for every provider – OIDC via discovery, GitHub/Meta with manually configured endpoints. Linking logic and data model stay entirely in our code and are therefore traceable as an example.
+
+## ADR-011: Hosting on Azure Container Apps (always on), data in Azure SQL Basic
+
+- **Status:** accepted – details, costs and rejected options in [06](06-hosting-and-data.md)
+- **Context:** Cheap, but without a wait on the first request, because the site is demonstrated.
+- **Decision:** Container Apps (Consumption) in Switzerland North with one instance always running (no scale to zero); Azure SQL Database Basic (no auto-pause); secrets in Key Vault.
+- **Consequence:** about CHF 10 a month instead of about CHF 0–2 with scale to zero.
+
+## ADR-012: Meta deferred
+
+- **Status:** accepted
+- **Context:** Facebook Login (direct as well as via External ID) needs a Meta app under a Meta Business account. None exists at the moment.
+- **Decision:** Meta is not set up for now; it is in the registry as "deferred". [ADR-004](#adr-004-mark-github-and-meta-explicitly-as-oauth-20) still applies once Meta is implemented.
 
 ## ADR-013: Domain `login-example.campus.cloud`
 
-- **Status:** angenommen
-- **Entscheid:** Die Anwendung läuft unter `https://login-example.campus.cloud`.
-- **Konsequenzen:** Redirect-URIs lauten `https://login-example.campus.cloud/auth/{provider}/callback`. Die Domain ist zugleich die WebAuthn-RP-ID für app-eigene Passkeys.
+- **Status:** accepted
+- **Decision:** The application runs at `https://login-example.campus.cloud`.
+- **Consequences:** Redirect URIs are `https://login-example.campus.cloud/auth/{provider}/callback`. The domain is also the WebAuthn RP id for the app's own passkeys.
 
-## ADR-009: Passkeys umsetzen – app-eigen und über IdPs
+## ADR-014: Data access with `mssql` and SQL migrations, no ORM
 
-- **Status:** angenommen (Ausgestaltung siehe [04](04-account-linking.md#passkeys))
-- **Entscheid:** Passkeys werden auf zwei Ebenen gezeigt:
-  1. **App-eigen (WebAuthn, SimpleWebAuthn):** Benutzer:innen können im Profil Passkeys registrieren und sich danach direkt mit Passkey anmelden.
-  2. **IdP-seitig:** Passkey-Anmeldung bei Entra (UniBE-Tenant), External ID u. a. Die App sieht davon nur die Claims `amr`/`acr` und zeigt diese an.
+- **Status:** accepted (implemented)
+- **Context:** Prisma and Kysely were the candidates for Azure SQL. The application needs about ten simple queries; as a reference implementation, what happens in the database should be easy to follow.
+- **Decision:** Direct access with the `mssql` package (driver `tedious`) and parameterised SQL. The schema lives as SQL files in `db/migrations/` and is applied with `npm run db:migrate` (recorded in `dbo.schema_migrations`).
+- **Consequences:**
+  - No code generation, no additional abstraction layer; the schema is directly readable.
+  - Authentication to Azure SQL with Entra ID (managed identity) – no password in the configuration. Locally a SQL login against SQL Server in Docker.
+  - The database enforces the uniqueness of (issuer, subject) with a `UNIQUE` constraint; two concurrent links of the same identity are therefore correctly detected as a conflict.
+  - Astro sessions are kept in the same database through a session driver of our own (`dbo.sessions`).
 
-## ADR-010: openid-client als einzige Auth-Bibliothek
+## ADR-015: Bicep and GitHub Actions with OIDC federation
 
-- **Status:** angenommen (im Grundgerüst umgesetzt)
-- **Kontext:** Alternativen: Auth.js (`auth-astro`) oder Arctic. Auth.js bringt eigenes Account-Linking-Verhalten mit, das wir explizit steuern wollen; Arctic ist schlank, deckt aber keine generische OIDC-Discovery/Validierung ab.
-- **Entscheid:** `openid-client` (v6) für alle Provider – OIDC via Discovery, GitHub/Meta mit manuell konfigurierten Endpunkten. Linking-Logik und Datenmodell bleiben vollständig in unserem Code und damit als Beispiel nachvollziehbar.
+- **Status:** accepted (implemented) – details in [08](08-deployment.md)
+- **Context:** The workflows follow `ch-unibe-learning-astro`: a tenant policy keeps service principals from assigning roles, the workflow identity holds `Unibe-Application-Owner (mg-unibe)` on the resource group, and the Key Vault guardrail policy requires purge protection as well as an expiry date and a content type on every secret.
+- **Decision:** Infrastructure as Bicep (`infra/`), deployed by a manual workflow (`infra.yml`, what-if or deploy). The image is built on every push to `main` and published to GHCR (`deploy.yml`), which also runs the migration job and rolls out the app. Client secrets travel from GitHub secrets into the Key Vault through `secrets.yml`, never as template parameters. All workflows sign in to Azure with OIDC federation.
+- **Consequences:**
+  - The role assignments are created by a person on the first deployment (`assignRoles`); the workflows set it to `false`.
+  - The image is public on GHCR, so the Container App pulls it without credentials.
 
-## ADR-011: Hosting auf Azure Container Apps (immer an), Daten in Azure SQL Basic
+## ADR-016: English throughout the repository
 
-- **Status:** angenommen – Details, Kosten und verworfene Varianten in [06](06-hosting-and-data.md)
-- **Kontext:** Kostengünstig, aber ohne Wartezeit beim ersten Aufruf, da die Seite vorgeführt wird.
-- **Entscheid:** Container Apps (Consumption) in Switzerland North mit einer immer laufenden Instanz (kein Scale-to-Zero); Azure SQL Database Basic (kein Auto-Pause); Secrets in Key Vault.
-- **Konsequenz:** ca. CHF 10 pro Monat statt ca. CHF 0–2 mit Scale-to-Zero.
+- **Status:** accepted
+- **Decision:** Code, comments, documentation, workflow and resource descriptions, and commit messages are English, as in `ch-unibe-learning-astro`. The user interface stays German for now; bilingual UI is an open question.

@@ -2,12 +2,12 @@ import sql from 'mssql';
 import { env } from './config';
 
 /**
- * Verbindung zu Azure SQL (bzw. lokal SQL Server in Docker).
+ * Connection to Azure SQL (or, locally, SQL Server in Docker).
  *
- * Authentisierung über SQL_AUTH:
- *   entra (Standard) – Entra ID via DefaultAzureCredential: Managed Identity in Azure, lokal `az login`.
- *                      Bei einer user-assigned Managed Identity zusätzlich AZURE_CLIENT_ID setzen.
- *   sql              – Benutzer/Passwort (SQL_USER, SQL_PASSWORD), nur für die lokale Entwicklung.
+ * Authentication through SQL_AUTH:
+ *   entra (default) – Entra ID via DefaultAzureCredential: managed identity in Azure, `az login` locally.
+ *                     For a user-assigned managed identity, also set AZURE_CLIENT_ID.
+ *   sql             – user and password (SQL_USER, SQL_PASSWORD), local development only.
  */
 
 export function isDatabaseConfigured(): boolean {
@@ -26,7 +26,7 @@ function buildConfig(): sql.config {
     port: Number(env('SQL_PORT') ?? 1433),
     options: {
       encrypt: true,
-      // Nur der lokale Docker-Container hat ein selbst signiertes Zertifikat.
+      // Only the local Docker container has a self-signed certificate.
       trustServerCertificate: local,
     },
     pool: { max: 5, min: 0, idleTimeoutMillis: 30_000 },
@@ -45,12 +45,12 @@ function buildConfig(): sql.config {
       },
     };
   }
-  throw new Error(`Unbekannter SQL_AUTH-Modus: ${mode}`);
+  throw new Error(`Unknown SQL_AUTH mode: ${mode}`);
 }
 
 const g = globalThis as unknown as { __sqlPool?: Promise<sql.ConnectionPool> };
 
-/** Gemeinsamer Connection-Pool (überlebt Hot-Reloads im Dev-Server). */
+/** Shared connection pool (survives hot reloads of the dev server). */
 export function getPool(): Promise<sql.ConnectionPool> {
   if (!g.__sqlPool) {
     g.__sqlPool = new sql.ConnectionPool(buildConfig()).connect();
@@ -61,7 +61,7 @@ export function getPool(): Promise<sql.ConnectionPool> {
   return g.__sqlPool;
 }
 
-/** SQL-Server-Fehlernummern für Verletzungen eines UNIQUE-Constraints bzw. -Index. */
+/** SQL Server error numbers for a violated UNIQUE constraint or index. */
 export function isUniqueViolation(err: unknown): boolean {
   const n = (err as { number?: number })?.number;
   return n === 2627 || n === 2601;

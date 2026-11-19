@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* UniBE-Rot – gegen das aktuelle CI-Manual prüfen. */
+  /* UniBE red – check against the current corporate design manual. */
   --color-unibe: #e3001b;
   --color-unibe-dark: #b80016;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;

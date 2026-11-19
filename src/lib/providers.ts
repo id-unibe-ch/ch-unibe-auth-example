@@ -1,31 +1,31 @@
 import { env } from './config';
 
 /**
- * Provider-Registry: Eine Definition pro Anmeldemethode.
- * Neue IdPs werden hier ergänzt – Routen und UI sind generisch.
- * Hintergrund und Besonderheiten: docs/03-identity-providers.md
+ * Provider registry: one definition per sign-in method.
+ * New IdPs are added here – routes and UI are generic.
+ * Background and specifics: docs/03-identity-providers.md
  */
 
 export type ProviderGroup = 'direct' | 'broker';
 export type Protocol = 'oidc' | 'oauth2';
 
 /**
- * available = umgesetzt (aktiv, sobald Client-ID und Secret gesetzt sind)
- * pending   = Zugang noch in Klärung
- * deferred  = vorerst zurückgestellt
+ * available = implemented (active once client id and secret are set)
+ * pending   = access still being clarified
+ * deferred  = postponed for now
  */
 export type ProviderStatus = 'available' | 'pending' | 'deferred';
 
-/** Normalisierte Benutzerinformation, unabhängig vom Protokoll. */
+/** Normalised user information, independent of the protocol. */
 export interface ProviderProfile {
-  /** Issuer, wie er gespeichert wird (bei Entra tenant-spezifisch). */
+  /** Issuer as stored (tenant-specific for Entra). */
   issuer: string;
-  /** Stabiler Identitätsschlüssel innerhalb des Issuers. */
+  /** Stable identity key within the issuer. */
   subject: string;
   displayName?: string;
   email?: string;
   emailVerified?: boolean;
-  /** Ausgewählte Claims für die Profil-/Lernansicht. */
+  /** Selected claims for the profile's technical details. */
   claims: Record<string, unknown>;
 }
 
@@ -33,7 +33,7 @@ export interface OAuth2Endpoints {
   issuer: string;
   authorizationEndpoint: string;
   tokenEndpoint: string;
-  /** Holt die Benutzerinformationen mit dem Access-Token (kein ID-Token vorhanden). */
+  /** Fetches the user information with the access token (there is no ID token). */
   fetchProfile: (accessToken: string) => Promise<ProviderProfile>;
 }
 
@@ -45,18 +45,18 @@ export interface ProviderDefinition {
   protocol: Protocol;
   status: ProviderStatus;
   statusNote?: string;
-  /** Präfix der Umgebungsvariablen: {PREFIX}_CLIENT_ID, {PREFIX}_CLIENT_SECRET */
+  /** Prefix of the environment variables: {PREFIX}_CLIENT_ID, {PREFIX}_CLIENT_SECRET */
   envPrefix: string;
   scope: string;
-  /** OIDC: Issuer-URL für Discovery (wird zur Laufzeit ermittelt). */
+  /** OIDC: issuer URL for discovery (resolved at runtime). */
   issuer?: () => string | undefined;
-  /** OAuth 2.0 ohne OIDC: Endpunkte und Profilabruf. */
+  /** OAuth 2.0 without OIDC: endpoints and profile lookup. */
   oauth2?: OAuth2Endpoints;
-  /** Wie aus den ID-Token-Claims der Identitätsschlüssel gebildet wird. */
+  /** How the identity key is formed from the ID token's claims. */
   identity?: 'sub' | 'entra-oid';
-  /** Zusätzliche Parameter für den Authorization Request. */
+  /** Additional parameters for the authorization request. */
   authParams?: Record<string, string>;
-  /** Zusätzliche Parameter beim Verknüpfen (z. B. Kontoauswahl erzwingen). */
+  /** Additional parameters when linking (e.g. force the account picker). */
   linkParams?: Record<string, string>;
 }
 
@@ -84,12 +84,12 @@ export function pickClaims(claims: Record<string, unknown>): Record<string, unkn
   return out;
 }
 
-/** Tenant-ID der UniBE (unibe.ch). */
+/** Tenant id of UniBE (unibe.ch). */
 export const UNIBE_TENANT_ID = 'd400387a-212f-43ea-ac7f-77aa12d7977e';
-/** Tenant-ID des External-ID-Directories unibeeid.onmicrosoft.com. */
+/** Tenant id of the External ID directory unibeeid.onmicrosoft.com. */
 export const EXTERNAL_ID_TENANT_ID = 'a791c572-76d6-4480-83df-b81dcdb92f69';
 
-/** Tenant-ID der persönlichen Microsoft-Konten. */
+/** Tenant id of personal Microsoft accounts. */
 export const MSA_TENANT_ID = '9188040d-6c67-4c5b-b112-36a304b66dad';
 
 async function fetchGitHubProfile(accessToken: string): Promise<ProviderProfile> {
@@ -120,7 +120,7 @@ async function fetchGitHubProfile(accessToken: string): Promise<ProviderProfile>
 
   return {
     issuer: 'https://github.com',
-    // Numerische ID statt Login – der Login-Name ist änderbar.
+    // The numeric id rather than the login – a login name can change.
     subject: String(user.id),
     displayName: user.name ?? user.login,
     email,
@@ -162,7 +162,7 @@ export const providers: ProviderDefinition[] = [
     status: 'available',
     envPrefix: 'MICROSOFT',
     scope: 'openid profile email',
-    // openid-client setzt bei «{tenantid}» die erwartete Issuer-URL aus dem tid-Claim ein.
+    // For "{tenantid}", openid-client inserts the expected issuer URL from the tid claim.
     issuer: () => 'https://login.microsoftonline.com/common/v2.0',
     identity: 'entra-oid',
     authParams: { prompt: 'select_account' },
@@ -262,8 +262,8 @@ export const providers: ProviderDefinition[] = [
     status: 'available',
     envPrefix: 'EXTERNAL_ID',
     scope: 'openid profile email',
-    // Discovery muss über den Tenant-ID-Host laufen: Der Issuer lautet {tid}.ciamlogin.com,
-    // nicht unibeeid.ciamlogin.com – sonst schlägt die Issuer-Prüfung fehl.
+    // Discovery has to use the tenant-id host: the issuer is {tid}.ciamlogin.com,
+    // not unibeeid.ciamlogin.com – otherwise the issuer check fails.
     issuer: () => {
       const tid = env('EXTERNAL_ID_TENANT_ID') ?? EXTERNAL_ID_TENANT_ID;
       return `https://${tid}.ciamlogin.com/${tid}/v2.0`;
@@ -284,7 +284,7 @@ export function clientCredentials(p: ProviderDefinition) {
   };
 }
 
-/** Ein Provider ist nutzbar, wenn er umgesetzt und vollständig konfiguriert ist. */
+/** A provider is usable once it is implemented and fully configured. */
 export function isEnabled(p: ProviderDefinition): boolean {
   if (p.status !== 'available') return false;
   const { clientId, clientSecret } = clientCredentials(p);

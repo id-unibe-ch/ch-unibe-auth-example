@@ -2,14 +2,14 @@ import type { SessionDriver } from 'astro';
 import { getPool, isDatabaseConfigured, sql } from './db';
 
 /**
- * Astro-Session-Treiber auf Azure SQL (Tabelle dbo.sessions).
- * Ohne Datenbank-Konfiguration: In-Memory (nur Entwicklung, eine Instanz).
+ * Astro session driver on Azure SQL (table dbo.sessions).
+ * Without a database configuration: in memory (development only, one instance).
  *
- * Den Ablauf einzelner Werte (ttl) regelt Astro im gespeicherten Inhalt selbst.
- * Hier werden nur verwaiste Zeilen aufgeräumt.
+ * Astro handles the expiry of individual values (ttl) inside the stored content itself.
+ * This only cleans up orphaned rows.
  */
 
-/** Zeilen, die länger nicht geschrieben wurden, werden gelöscht (deutlich länger als die Session-TTL). */
+/** Rows not written for this long are deleted (well beyond the session TTL). */
 const STALE_AFTER_HOURS = 24;
 const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -34,7 +34,7 @@ async function cleanupIfDue() {
       .input('hours', sql.Int, STALE_AFTER_HOURS)
       .query('DELETE FROM dbo.sessions WHERE updated_at < DATEADD(hour, -@hours, SYSUTCDATETIME())');
   } catch (err) {
-    console.error('[session] Aufräumen fehlgeschlagen', err);
+    console.error('[session] cleanup failed', err);
   }
 }
 

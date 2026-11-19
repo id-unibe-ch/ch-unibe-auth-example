@@ -20,10 +20,10 @@ export const GET: APIRoute = async ({ params, url, locals, session, redirect }) 
 
   const back = tx.intent === 'link' ? '/profile' : '/';
 
-  // Abbruch oder Fehler beim IdP (z. B. access_denied).
+  // Cancelled or refused at the IdP (e.g. access_denied).
   const idpError = url.searchParams.get('error');
   if (idpError) {
-    console.warn(`[auth] ${provider.id} meldet Fehler: ${idpError}`, url.searchParams.get('error_description'));
+    console.warn(`[auth] ${provider.id} returned an error: ${idpError}`, url.searchParams.get('error_description'));
     return fail(`${provider.label}: Die Anmeldung wurde abgebrochen oder abgelehnt.`, back);
   }
 
@@ -31,11 +31,11 @@ export const GET: APIRoute = async ({ params, url, locals, session, redirect }) 
   try {
     profile = await completeAuthorization(provider, tx, url);
   } catch (err) {
-    console.error(`[auth] Callback von ${provider.id} fehlgeschlagen`, err);
+    console.error(`[auth] callback from ${provider.id} failed`, err);
     return fail(`Die Antwort von ${provider.label} konnte nicht verarbeitet werden.`, back);
   }
 
-  // --- Verknüpfen: Identität dem eingeloggten Benutzer zuordnen ---
+  // --- Link: attach the identity to the signed-in user ---
   if (tx.intent === 'link') {
     if (!locals.user) return fail('Bitte zuerst anmelden.');
     const result = await store.linkIdentity(locals.user.id, provider.id, profile);
@@ -52,7 +52,7 @@ export const GET: APIRoute = async ({ params, url, locals, session, redirect }) 
     return redirect('/profile');
   }
 
-  // --- Anmelden: bestehende Identität oder neues Benutzerkonto ---
+  // --- Sign-in: existing identity or a new user account ---
   let userId = await store.findUserIdByIdentity(profile.issuer, profile.subject);
   if (userId) {
     await store.recordLogin(provider.id, profile);
@@ -60,7 +60,7 @@ export const GET: APIRoute = async ({ params, url, locals, session, redirect }) 
     userId = (await store.createUser(provider.id, profile)).id;
   }
 
-  // Session-Fixation verhindern: neue Session-ID nach erfolgreicher Anmeldung.
+  // Prevent session fixation: a new session id after a successful sign-in.
   await session?.regenerate();
   session?.set('userId', userId);
   session?.set('lastAuthAt', Date.now());

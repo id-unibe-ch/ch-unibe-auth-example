@@ -1,86 +1,88 @@
-# 01 – Architektur
+# 01 – Architecture
 
-## Überblick
+## Overview
 
-Die Applikation ist eine serverseitig gerenderte Astro-App. Sie ist selbst die *Relying Party* (RP) und spricht die Identity Provider auf **zwei Wegen** an, die bewusst beide gezeigt werden (siehe [ADR-003](02-decisions.md#adr-003-beide-anbindungswege-direkt-und-broker-zeigen)):
+The application is a server-rendered Astro app. It is itself the *relying party* (RP) and talks to the identity providers in **two ways**, both of which are shown deliberately (see [ADR-003](02-decisions.md#adr-003-show-both-connection-paths-direct-and-broker)):
 
-1. **Direkt:** Die App ist bei jedem IdP einzeln registriert und führt den Flow selbst durch.
-2. **Broker:** Die App ist nur beim bestehenden **Entra External ID Directory** registriert; dieses föderiert seinerseits mit Social-IdPs, E-Mail-OTP und Passkeys.
+1. **Direct:** the app is registered with each IdP individually and runs the flow itself.
+2. **Broker:** the app is registered only with the existing **Entra External ID directory**, which in turn federates with social IdPs, email one-time passcodes and passkeys.
 
 ```mermaid
 flowchart LR
-    U[Browser] --> APP[Astro SSR App<br/>Azure Container Apps]
-    APP --> DB[(Benutzer & Identitäten<br/>Azure SQL)]
-    APP --> KV[Key Vault<br/>Secrets & Schlüssel]
+    U[Browser] --> APP[Astro SSR app<br/>Azure Container Apps]
+    APP --> DB[(Users, identities, sessions<br/>Azure SQL)]
+    APP --> KV[Key Vault<br/>client secrets]
 
-    subgraph Direkt
-        E1[Entra ID – UniBE-Tenant]
-        E2[Microsoft<br/>common: Privat + alle Tenants]
+    subgraph Direct
+        E1[Entra ID – UniBE tenant]
+        E2[Microsoft<br/>common: personal + all tenants]
         EDU[SWITCH edu-ID / SWITCHaai]
         ORC[ORCID]
         AGOV[AGOV]
         GOO[Google]
-        APL[Apple – zurückgestellt]
+        APL[Apple – deferred]
         GH[GitHub – OAuth 2.0]
-        META[Meta – zurückgestellt]
+        META[Meta – deferred]
     end
 
     subgraph Broker[Entra External ID]
-        XID[External ID Directory<br/>unibeeid.onmicrosoft.com]
+        XID[External ID directory<br/>unibeeid.onmicrosoft.com]
         XID --> XG[Google]
-        XID --> XA[Apple – zurückgestellt]
-        XID --> XF[Facebook – zurückgestellt]
-        XID --> XO[E-Mail-OTP]
+        XID --> XA[Apple – deferred]
+        XID --> XF[Facebook – deferred]
+        XID --> XO[Email one-time passcode]
         XID --> XP[Passkey]
     end
 
-    APP --> Direkt
+    APP --> Direct
     APP --> XID
 ```
 
-## Komponenten
+## Components
 
-| Komponente | Aufgabe |
+| Component | Purpose |
 |---|---|
-| **Login-Seite** (`/`) | Startseite. Zeigt alle Anmeldemethoden, gruppiert nach «Direkt» und «Über External ID». Passkey-Login als eigene Option. |
-| **Auth-Routen** (`/auth/[provider]/login`, `/auth/[provider]/callback`) | Generischer Handler pro Provider: baut Authorization Request (PKCE, `state`, `nonce`), verarbeitet Callback, validiert Tokens bzw. holt Benutzerdaten. |
-| **Provider-Registry** | Eine Konfiguration pro Provider (Typ `oidc` / `oauth2`, Discovery-URL oder Endpunkte, Scopes, Claim-Mapping, Identitätsschlüssel). Neue IdPs = neuer Eintrag. |
-| **Profil** (`/profile`) | Zeigt Benutzerkonto, verbundene Accounts (mit Provider, Zeitpunkt, letzte Anmeldung, ausgewählte Claims) und Passkeys. Aktionen: verbinden, trennen. |
-| **Linking-Routen** (`/link/[provider]`) | Wie Login, aber mit Intent `link` – das Ergebnis wird dem eingeloggten Benutzer zugeordnet (siehe [04](04-account-linking.md)). |
-| **Passkey-Routen** (`/passkey/*`) | WebAuthn-Registrierung und -Anmeldung (SimpleWebAuthn). |
-| **Session** | Server-seitige Session (ID im `HttpOnly`/`Secure`/`SameSite=Lax`-Cookie), Daten in der DB. |
-| **Debug-/Lernansicht** | Optional ein- und ausklappbar: Rohclaims des ID-Tokens bzw. der Userinfo-Antwort, `amr`/`acr`, Issuer – zentral für den Demo-Zweck. Keine Tokens selbst anzeigen. |
+| **Sign-in page** (`/`) | Start page. Shows every sign-in method, grouped into "direct" and "via External ID". Passkey sign-in as its own option. |
+| **Auth routes** (`/auth/[provider]/login`, `/auth/[provider]/callback`) | One generic handler per provider: builds the authorization request (PKCE, `state`, `nonce`), processes the callback, validates tokens or fetches the user's data. |
+| **Provider registry** (`src/lib/providers.ts`) | One definition per provider (type `oidc` / `oauth2`, issuer or endpoints, scopes, identity key). A new IdP is a new entry. |
+| **Profile** (`/profile`) | Shows the user account, linked accounts (provider, linked at, last sign-in, selected claims) and later passkeys. Actions: link, unlink, delete account. |
+| **Linking** (`/auth/[provider]/login?intent=link`) | Like sign-in, but the result is attached to the signed-in user (see [04](04-account-linking.md)). |
+| **Passkey routes** (`/passkey/*`) | WebAuthn registration and sign-in (SimpleWebAuthn) – planned. |
+| **Session** | Astro sessions with a driver on Azure SQL; the session id is in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie. |
+| **Technical details** | A collapsible view per linked account: issuer, subject and the selected claims – central to the demo's purpose. Tokens themselves are never shown. |
 
-## Ablauf Login (vereinfacht)
+## Sign-in flow (simplified)
 
 ```mermaid
 sequenceDiagram
     participant B as Browser
-    participant A as Astro App
-    participant I as IdP / Broker
+    participant A as Astro app
+    participant I as IdP / broker
     participant D as DB
 
-    B->>A: Klick «Anmelden mit X»
-    A->>A: state, nonce, PKCE verifier erzeugen (kurzlebiges Cookie)
-    A-->>B: Redirect zum Authorization Endpoint
-    B->>I: Anmeldung
+    B->>A: Click "Sign in with X"
+    A->>A: Create state, nonce, PKCE verifier (stored in the session)
+    A-->>B: Redirect to the authorization endpoint
+    B->>I: Sign in
     I-->>B: Redirect /auth/x/callback?code&state
     B->>A: Callback
-    A->>I: Code gegen Tokens tauschen (+ ggf. Userinfo/API)
-    A->>A: ID-Token validieren (iss, aud, exp, nonce, Signatur)
-    A->>D: Identität (issuer, subject) suchen
-    alt bekannt
-        D-->>A: Benutzer
-    else unbekannt
-        A->>D: neuen Benutzer + Identität anlegen
+    A->>I: Exchange the code for tokens (+ userinfo/API if needed)
+    A->>A: Validate the ID token (iss, aud, exp, nonce, signature)
+    A->>D: Look up the identity (issuer, subject)
+    alt known
+        D-->>A: User
+    else unknown
+        A->>D: Create a new user + identity
     end
-    A-->>B: Session-Cookie, Redirect /profile
+    A-->>B: New session id, redirect /profile
 ```
 
-## Sicherheitsgrundsätze
+## Security principles
 
-- Authorization Code Flow mit **PKCE** für alle Provider; kein Implicit Flow.
-- `state` und `nonce` immer prüfen; Transaktionsdaten in einem kurzlebigen, signierten Cookie.
-- Identitäten werden **ausschliesslich über (Issuer, Subject)** identifiziert, nie über E-Mail (siehe [ADR-005](02-decisions.md)).
-- Access-/Refresh-Tokens der IdPs werden nicht persistiert (die App braucht nach dem Login keinen API-Zugriff).
-- Secrets und private Schlüssel (z. B. Apple-Key) liegen in Key Vault, Zugriff via Managed Identity.
+- Authorization code flow with **PKCE** for every provider; no implicit flow.
+- `state` and `nonce` are always checked; the transaction lives in the server-side session and expires after 10 minutes.
+- Identities are identified **only by (issuer, subject)**, never by email address (see [ADR-005](02-decisions.md)).
+- The IdPs' access and refresh tokens are not persisted – the app needs no API access after sign-in.
+- The session id is regenerated after every sign-in (session fixation).
+- Form posts (sign-out, unlink, delete) are protected by Astro's origin check. Behind the Container Apps ingress, `security.allowedDomains` makes Astro trust `X-Forwarded-Host`/`-Proto` for the app's own hosts only.
+- Client secrets live in Key Vault; the app reads them with its managed identity. Azure SQL accepts Entra sign-in only.

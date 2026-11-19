@@ -1,5 +1,5 @@
--- 001: Benutzerkonten, verknüpfte Identitäten und Sessions
--- Datenmodell: docs/04-account-linking.md
+-- 001: user accounts, linked identities and sessions
+-- Data model: docs/04-account-linking.md
 
 CREATE TABLE dbo.users (
     id            UNIQUEIDENTIFIER NOT NULL CONSTRAINT pk_users PRIMARY KEY,
@@ -19,13 +19,13 @@ CREATE TABLE dbo.identities (
     claims          NVARCHAR(MAX)    NOT NULL CONSTRAINT ck_identities_claims_json CHECK (ISJSON(claims) = 1),
     linked_at       DATETIME2(3)     NOT NULL CONSTRAINT df_identities_linked_at DEFAULT SYSUTCDATETIME(),
     last_login_at   DATETIME2(3)     NOT NULL CONSTRAINT df_identities_last_login_at DEFAULT SYSUTCDATETIME(),
-    -- Eine Identität gehört genau einem Benutzerkonto (ADR-005).
+    -- An identity belongs to exactly one user account (ADR-005).
     CONSTRAINT uq_identities_issuer_subject UNIQUE (issuer, subject)
 );
 
 CREATE INDEX ix_identities_user_id ON dbo.identities (user_id);
 
--- Astro-Sessions: Inhalt ist ein serialisierter Blob, Ablauf einzelner Werte regelt Astro selbst.
+-- Astro sessions: the content is a serialised blob; Astro handles the expiry of individual values.
 CREATE TABLE dbo.sessions (
     id          NVARCHAR(128)  NOT NULL CONSTRAINT pk_sessions PRIMARY KEY,
     data        NVARCHAR(MAX)  NOT NULL,

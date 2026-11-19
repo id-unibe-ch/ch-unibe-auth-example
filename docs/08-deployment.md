@@ -1,65 +1,65 @@
 # 08 – Deployment (Azure, Bicep, GitHub Actions)
 
-Infrastruktur als Code in [`infra/main.bicep`](../infra/main.bicep), Parameter in [`infra/main.bicepparam`](../infra/main.bicepparam). Architektur und Kosten: [06](06-hosting-and-data.md). Aufbau der Workflows nach dem Vorbild von `ch-unibe-learning-astro`.
+Infrastructure as code in [`infra/main.bicep`](../infra/main.bicep), parameters in [`infra/main.bicepparam`](../infra/main.bicepparam). Architecture and costs: [06](06-hosting-and-data.md). The workflows follow `ch-unibe-learning-astro` ([ADR-015](02-decisions.md)).
 
-## Ressourcen
+## Resources
 
-| Ressource | Name | Zweck |
+| Resource | Name | Purpose |
 |---|---|---|
-| Log Analytics | `log-authex` | Logs der Container-Apps-Umgebung, 30 Tage, Tageslimit 0.2 GB |
-| Container-Apps-Umgebung | `cae-authex` | Consumption-Profil |
-| Container App | `ca-authex` | Die Anwendung, 0.25 vCPU / 0.5 GiB, immer eine Instanz |
-| Container-Apps-Job | `caj-authex-migrate` | Datenbank-Migration, vom Deploy-Workflow ausgelöst |
-| Managed Identity | `id-authex-app` | App: Key-Vault-Secrets lesen, Daten lesen/schreiben |
-| Managed Identity | `id-authex-migrate` | Migration: Schema ändern |
-| Key Vault | `kv-authex-…` | Client Secrets der Anbieter (RBAC, Purge Protection) |
-| SQL Server | `sql-authex-…` | Nur Entra-Anmeldung, Administrator = Entra-Gruppe |
-| SQL-Datenbank | `sqldb-authex` | Basic, 2 GB |
+| Log Analytics | `log-authex` | Logs of the Container Apps environment, 30 days, daily cap 0.2 GB |
+| Container Apps environment | `cae-authex` | Consumption profile |
+| Container App | `ca-authex` | The application, 0.25 vCPU / 0.5 GiB, always one instance |
+| Container Apps job | `caj-authex-migrate` | Database migration, started by the deploy workflow |
+| Managed identity | `id-authex-app` | App: read Key Vault secrets, read/write data |
+| Managed identity | `id-authex-migrate` | Migration: change the schema |
+| Key Vault | `kv-authex-…` | The providers' client secrets (RBAC, purge protection) |
+| SQL server | `sql-authex-…` | Entra sign-in only, administrator = an Entra group |
+| SQL database | `sqldb-authex` | Basic, 2 GB |
 
-Die Suffixe `…` werden aus der Ressourcengruppe abgeleitet und sind stabil.
+The `…` suffixes are derived from the resource group and are stable.
 
 ## Workflows
 
-| Workflow | Auslöser | Aufgabe |
+| Workflow | Trigger | Purpose |
 |---|---|---|
-| [`ci.yml`](../.github/workflows/ci.yml) | Pull Request, Push | Typecheck, Build, Bicep kompilieren und linten |
-| [`deploy.yml`](../.github/workflows/deploy.yml) | Push auf `main`, manuell | Image bauen → GHCR, Migrations-Job mit neuem Image ausführen, App aktualisieren |
-| [`infra.yml`](../.github/workflows/infra.yml) | manuell | Bicep `what-if` oder `deploy`; übernimmt das laufende Image |
-| [`secrets.yml`](../.github/workflows/secrets.yml) | manuell | GitHub-Secrets → Key Vault (mit Ablaufdatum und Content-Type), App neu starten |
+| [`ci.yml`](../.github/workflows/ci.yml) | pull request, push to `main` | Type-check, build, compile and lint the Bicep template |
+| [`deploy.yml`](../.github/workflows/deploy.yml) | push to `main`, manual | Build the image → GHCR, run the migration job with the new image, update the app |
+| [`infra.yml`](../.github/workflows/infra.yml) | manual | Bicep `what-if` or `deploy`; keeps the running image |
+| [`secrets.yml`](../.github/workflows/secrets.yml) | manual | GitHub secrets → Key Vault (with expiry date and content type), restart the app |
 
-Alle Azure-Workflows melden sich per **OIDC-Federation** an – es liegt kein Azure-Secret in GitHub.
+Every Azure workflow signs in with **OIDC federation** – there is no Azure secret in GitHub.
 
-## Einmalige Einrichtung
+## One-time setup
 
-### 1. Identität für die Workflows
+### 1. An identity for the workflows
 
-Im UniBE-Tenant eine App-Registrierung anlegen, z. B. «UniBE - IDCI - Auth Example GitHub Deploy», mit einem **Federated Credential**:
+In the UniBE tenant, create an app registration, e.g. "UniBE - IDCI - Auth Example GitHub Deploy", with a **federated credential**:
 
-- Szenario: GitHub Actions bzw. «Other issuer»
+- Scenario: GitHub Actions or "Other issuer"
 - Issuer: `https://token.actions.githubusercontent.com`
 - Subject: `repo:id-unibe-ch@53422583/ch-unibe-auth-example@1464391898:ref:refs/heads/main`
 - Audience: `api://AzureADTokenExchange`
 
-Die Organisation stellt Subjects mit den unveränderlichen Owner- und Repository-IDs aus. Die einfache Form `repo:id-unibe-ch/ch-unibe-auth-example:…` passt nie (`AADSTS700213`).
+The organisation issues subjects with the immutable owner and repository ids. The plain form `repo:id-unibe-ch/ch-unibe-auth-example:…` never matches (`AADSTS700213`).
 
-Auf der Ressourcengruppe erhält der Service Principal die Rolle **Unibe-Application-Owner (mg-unibe)**. Contributor wird Service Principals hier nicht vergeben, und Rollen zuweisen dürfen sie wegen einer Tenant-Policy ohnehin nicht. Die Workflows setzen daher `ASSIGN_ROLES=false`.
+On the resource group, the service principal gets the custom role **Unibe-Application-Owner (mg-unibe)**. Contributor is not granted to service principals here, and a tenant policy keeps them from assigning roles anyway. The workflows therefore set `ASSIGN_ROLES=false`.
 
-### 2. Repository-Variablen (Settings → Secrets and variables → Actions → Variables)
+### 2. Repository variables (Settings → Secrets and variables → Actions → Variables)
 
-| Variable | Wert |
+| Variable | Value |
 |---|---|
-| `AZURE_CLIENT_ID` | Client-ID der Workflow-App-Registrierung |
+| `AZURE_CLIENT_ID` | Client id of the workflow app registration |
 | `ENTRA_TENANT_ID` | `d400387a-212f-43ea-ac7f-77aa12d7977e` |
-| `AZURE_SUBSCRIPTION_ID` | Subscription unter dem EA |
-| `RESOURCE_GROUP` | z. B. `rg-authex` (Switzerland North) |
-| `DEPLOYER_PRINCIPAL_ID` | **Objekt-ID des Service Principals** (Enterprise Application, nicht App-Registrierung) |
-| `SQL_ADMIN_GROUP_NAME` | Anzeigename der Entra-Gruppe für die SQL-Administration |
-| `SQL_ADMIN_GROUP_OBJECT_ID` | Objekt-ID dieser Gruppe |
-| `KEY_VAULT_NAME` | optional; sonst sucht `secrets.yml` den Vault `kv-authex-…` in der Ressourcengruppe |
+| `AZURE_SUBSCRIPTION_ID` | The subscription under the EA |
+| `RESOURCE_GROUP` | e.g. `rg-authex` (Switzerland North) |
+| `DEPLOYER_PRINCIPAL_ID` | **Object id of the service principal** (the enterprise application, not the app registration) |
+| `SQL_ADMIN_GROUP_NAME` | Display name of the Entra group administering SQL |
+| `SQL_ADMIN_GROUP_OBJECT_ID` | Object id of that group |
+| `KEY_VAULT_NAME` | optional; otherwise `secrets.yml` looks for `kv-authex-…` in the resource group |
 
-### 3. Repository-Secrets (Settings → Secrets and variables → Actions → Secrets)
+### 3. Repository secrets (Settings → Secrets and variables → Actions → Secrets)
 
-| GitHub-Secret | Key-Vault-Secret |
+| GitHub secret | Key Vault secret |
 |---|---|
 | `ENTRA_UNIBE_CLIENT_SECRET` | `entra-unibe-client-secret` |
 | `MICROSOFT_CLIENT_SECRET` | `microsoft-client-secret` |
@@ -67,21 +67,21 @@ Auf der Ressourcengruppe erhält der Service Principal die Rolle **Unibe-Applica
 | `SWITCH_CLIENT_SECRET` | `switch-client-secret` |
 | `ORCID_CLIENT_SECRET` | `orcid-client-secret` |
 | `GOOGLE_CLIENT_SECRET` | `google-client-secret` |
-| `OAUTH_GITHUB_CLIENT_SECRET` | `github-client-secret` (GitHub verbietet Secret-Namen mit Präfix `GITHUB_`) |
+| `OAUTH_GITHUB_CLIENT_SECRET` | `github-client-secret` (GitHub refuses secret names starting with `GITHUB_`) |
 | `AGOV_CLIENT_SECRET` | `agov-client-secret` |
 
-Nicht gesetzte Secrets überspringt der Workflow.
+The workflow skips any secret that is not set.
 
-### 4. Erstes Deployment durch eine Person (Phase 1)
+### 4. First deployment by a person (phase 1)
 
-Die Rollenzuweisungen (App-Identität → *Key Vault Secrets User*, Workflow → *Key Vault Secrets Officer*) muss eine Person anlegen. Lokal mit Azure CLI und Bicep:
+The role assignments (app identity → *Key Vault Secrets User*, workflow → *Key Vault Secrets Officer*) have to be created by a person. Locally, with the Azure CLI and Bicep:
 
 ```bash
 az bicep build --file infra/main.bicep
 ```
 
 ```bash
-export SQL_ADMIN_GROUP_NAME='<Gruppe>' SQL_ADMIN_GROUP_OBJECT_ID='<Objekt-ID>' DEPLOYER_PRINCIPAL_ID='<Objekt-ID des Service Principals>' DEPLOY_APP=false
+export SQL_ADMIN_GROUP_NAME='<group>' SQL_ADMIN_GROUP_OBJECT_ID='<object id>' DEPLOYER_PRINCIPAL_ID='<object id of the service principal>' DEPLOY_APP=false
 ```
 
 ```bash
@@ -92,52 +92,53 @@ az deployment group what-if --resource-group rg-authex --parameters infra/main.b
 az deployment group create --resource-group rg-authex --parameters infra/main.bicepparam
 ```
 
-`ASSIGN_ROLES` bleibt dabei ungesetzt (= `true`).
+Leave `ASSIGN_ROLES` unset (= `true`).
 
-### 5. Secrets in den Key Vault
+### 5. Secrets into the Key Vault
 
-Workflow **Key Vault befüllen** (`secrets.yml`) ausführen. Gültigkeit nicht länger wählen als beim Anbieter; das Ablaufdatum im Key Vault ist die Erinnerung zum Erneuern.
+Run the **Fill Key Vault** workflow (`secrets.yml`). Choose a validity no longer than at the provider; the expiry date in the Key Vault is the reminder to renew the secret.
 
-### 6. Datenbankbenutzer anlegen
+### 6. Database users
 
-Als Mitglied der SQL-Administratorgruppe mit `sqldb-authex` verbinden (Azure Data Studio, VS Code mssql oder Query-Editor im Portal) und [`infra/sql/grant-identities.sql`](../infra/sql/grant-identities.sql) ausführen.
+Connect to `sqldb-authex` as a member of the SQL administrator group (Azure Data Studio, VS Code mssql or the portal's query editor) and run [`infra/sql/grant-identities.sql`](../infra/sql/grant-identities.sql).
 
-### 7. Image bauen
+### 7. Build the image
 
-Push auf `main` (oder `deploy.yml` manuell starten). Solange die Container App fehlt, baut der Workflow nur das Image.
+Push to `main` (or start `deploy.yml` by hand). As long as the Container App does not exist, the workflow only builds the image.
 
-Nach dem ersten Push prüfen, ob das Paket `ghcr.io/id-unibe-ch/ch-unibe-auth-example` **öffentlich** ist (GitHub → Organisation → Packages → Package settings). Die Container App bezieht das Image ohne Zugangsdaten; bei einem privaten Paket müssten `registryServer`, `registryUsername` und `registryPassword` gesetzt werden.
+After the first push, check that the package `ghcr.io/id-unibe-ch/ch-unibe-auth-example` is **public** (GitHub → organisation → Packages → Package settings). The Container App pulls the image without credentials; for a private package, `registryServer`, `registryUsername` and `registryPassword` would have to be set.
 
-### 8. App bereitstellen (Phase 2)
+### 8. Deploy the app (phase 2)
 
-Workflow **Infrastructure (Bicep)** mit `mode = what-if`, `deploy_app = true`, `custom_domain_mode = none`, Ergebnis prüfen, dann mit `mode = deploy`.
+Run **Infrastructure (Bicep)** with `mode = what-if`, `deploy_app = true`, `custom_domain_mode = none`, check the result, then run it with `mode = deploy`.
 
-### 9. Erstes Release
+### 9. First release
 
-`deploy.yml` manuell starten: Migrations-Job läuft mit dem aktuellen Image, danach wird die App aktualisiert. Die App ist dann unter `https://ca-authex.<defaultDomain>` erreichbar (Ausgabe `appDefaultHostname`).
+Start `deploy.yml` by hand: the migration job runs with the current image, then the app is updated. The app is then reachable at `https://ca-authex.<defaultDomain>` (output `appDefaultHostname`).
 
-### 10. Eigene Domain `login-example.campus.cloud`
+### 10. Custom domain `login-example.campus.cloud`
 
-1. DNS-Einträge in der Zone `campus.cloud`:
+1. DNS records in the `campus.cloud` zone:
    - `CNAME login-example` → `<appDefaultHostname>`
    - `TXT asuid.login-example` → `<customDomainVerificationId>`
-2. `infra.yml` mit `custom_domain_mode = validate` (Hostname ohne Zertifikat, verwaltetes Zertifikat wird ausgestellt – einige Minuten).
-3. `infra.yml` mit `custom_domain_mode = bind`. `APP_BASE_URL` zeigt danach auf `https://login-example.campus.cloud`.
+2. `infra.yml` with `custom_domain_mode = validate` (hostname without certificate, the managed certificate is issued – takes a few minutes).
+3. `infra.yml` with `custom_domain_mode = bind`. `APP_BASE_URL` then points at `https://login-example.campus.cloud`.
 
-Die Redirect-URIs der App-Registrierungen ([07](07-app-registrations.md)) müssen zur aktiven Basis-URL passen. Vor Schritt 10 also vorübergehend auch `https://<appDefaultHostname>/auth/{provider}/callback` eintragen oder erst danach testen.
+The redirect URIs of the app registrations ([07](07-app-registrations.md)) have to match the active base URL. Before step 10, either add `https://<appDefaultHostname>/auth/{provider}/callback` temporarily or test only afterwards.
 
-## Betrieb
+## Operations
 
-- **Neue Version:** Merge bzw. Push auf `main` – `deploy.yml` migriert und rollt aus.
-- **Infrastruktur ändern:** `infra.yml`, immer zuerst `what-if`. Das laufende Image bleibt erhalten. Standardwerte der Eingaben (`deploy_app = true`, `custom_domain_mode = bind`) entsprechen dem Endzustand.
-- **Neuer Anbieter:** GitHub-Secret anlegen → `secrets.yml` → Eintrag in `identityProviders` (`infra/main.bicepparam`) → `infra.yml`.
-- **Secret erneuern:** GitHub-Secret aktualisieren → `secrets.yml` (startet die App neu).
-- **Neue Rollenzuweisung nötig:** von einer Person deployen lassen (`ASSIGN_ROLES` ungesetzt).
+- **New version:** merge or push to `main` – `deploy.yml` migrates and rolls out.
+- **Infrastructure change:** `infra.yml`, always `what-if` first. The running image is kept. The inputs' defaults (`deploy_app = true`, `custom_domain_mode = bind`) are the final state.
+- **New provider:** add the GitHub secret → `secrets.yml` → entry in `identityProviders` (`infra/main.bicepparam`) → `infra.yml`.
+- **Renewed secret:** update the GitHub secret → `secrets.yml` (restarts the app).
+- **New role assignment needed:** have a person deploy (`ASSIGN_ROLES` unset).
 
-## Bewusste Entscheide
+## Deliberate choices
 
-- **SQL-Firewall «Azure-Dienste zulassen»:** Container Apps im Consumption-Profil haben keine festen ausgehenden IP-Adressen. Die Anmeldung ist nur mit Entra möglich (keine SQL-Logins), das Risiko daher gering. Strengere Alternative: VNet-Integration mit Private Endpoint (Mehrkosten).
-- **Zwei Identitäten:** Die App hat keine DDL-Rechte; Schemaänderungen nur über den Migrations-Job.
-- **Zwei Phasen:** Die Container App verweist beim Erstellen auf Key-Vault-Secrets, die es dann bereits geben muss.
-- **Secrets nie als Template-Parameter:** Sie stünden sonst in der Deployment-Historie. Der Weg führt ausschliesslich über `secrets.yml` (oder `az keyvault secret set` von Hand).
-- **Key Vault mit Purge Protection, Secrets mit Ablaufdatum und Content-Type:** von der Guardrail-Policy des Tenants verlangt.
+- **SQL firewall "allow Azure services":** Container Apps on the Consumption profile have no fixed outbound IP addresses. Sign-in is possible with Entra only (no SQL logins), so the risk is small. Stricter alternative: VNet integration with a private endpoint (extra cost).
+- **Two identities:** the app has no DDL rights; schema changes only through the migration job.
+- **Two phases:** the Container App refers to Key Vault secrets on creation, and they have to exist by then.
+- **Secrets never as template parameters:** they would end up in the deployment history. They go only through `secrets.yml` (or `az keyvault secret set` by hand).
+- **Key Vault with purge protection, secrets with expiry date and content type:** required by the tenant's guardrail policy.
+- **Not verified here:** the template has not been compiled in the development environment (no Bicep CLI); `ci.yml` compiles and lints it on every pull request.

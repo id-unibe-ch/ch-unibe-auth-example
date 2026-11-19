@@ -1,6 +1,6 @@
 name: CI
 
-# Prüft jeden Pull Request und jeden Push: Typecheck, Build und die Bicep-Vorlage.
+# Checks every pull request and every push to main: type-check, build and the Bicep template.
 on:
   pull_request:
   push:
@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Bicep kompilieren
+      - name: Compile and lint Bicep
         run: |
           az bicep install
           az bicep build --file infra/main.bicep --stdout > /dev/null

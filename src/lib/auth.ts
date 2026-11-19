@@ -16,17 +16,17 @@ export interface AuthTransaction {
   createdAt: number;
 }
 
-/** Maximale Dauer einer Anmeldung beim IdP. */
+/** Maximum duration of a sign-in at the IdP. */
 export const TX_MAX_AGE_MS = 10 * 60 * 1000;
 
 const configCache = new Map<string, Promise<client.Configuration>>();
 
 async function buildConfiguration(p: ProviderDefinition): Promise<client.Configuration> {
   const { clientId, clientSecret } = clientCredentials(p);
-  if (!clientId || !clientSecret) throw new Error(`Provider ${p.id} ist nicht konfiguriert`);
+  if (!clientId || !clientSecret) throw new Error(`Provider ${p.id} is not configured`);
 
   if (p.protocol === 'oauth2') {
-    if (!p.oauth2) throw new Error(`Provider ${p.id}: OAuth-2.0-Endpunkte fehlen`);
+    if (!p.oauth2) throw new Error(`Provider ${p.id}: OAuth 2.0 endpoints missing`);
     return new client.Configuration(
       {
         issuer: p.oauth2.issuer,
@@ -39,9 +39,9 @@ async function buildConfiguration(p: ProviderDefinition): Promise<client.Configu
   }
 
   const issuer = p.issuer?.();
-  if (!issuer) throw new Error(`Provider ${p.id}: Issuer fehlt`);
+  if (!issuer) throw new Error(`Provider ${p.id}: issuer missing`);
   const url = new URL(issuer);
-  // Nur für lokale Tests gegen einen Mock-IdP: HTTP auf localhost erlauben.
+  // Local tests against a mock IdP only: allow HTTP on localhost.
   const isLocal = url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname);
   return client.discovery(url, clientId, clientSecret, undefined, {
     execute: isLocal && import.meta.env.DEV ? [client.allowInsecureRequests] : [],
@@ -52,14 +52,14 @@ function getConfiguration(p: ProviderDefinition): Promise<client.Configuration> 
   let cfg = configCache.get(p.id);
   if (!cfg) {
     cfg = buildConfiguration(p);
-    // Fehlgeschlagene Discovery nicht dauerhaft cachen.
+    // Do not cache a failed discovery.
     cfg.catch(() => configCache.delete(p.id));
     configCache.set(p.id, cfg);
   }
   return cfg;
 }
 
-/** Erzeugt die Transaktion und die URL, zu der der Browser umgeleitet wird. */
+/** Creates the transaction and the URL the browser is redirected to. */
 export async function startAuthorization(
   p: ProviderDefinition,
   intent: AuthTransaction['intent'],
@@ -90,8 +90,8 @@ export async function startAuthorization(
 }
 
 /**
- * Verarbeitet den Callback: tauscht den Code, validiert das ID-Token (OIDC)
- * bzw. holt das Profil über die API (OAuth 2.0) und normalisiert das Ergebnis.
+ * Processes the callback: exchanges the code, validates the ID token (OIDC)
+ * or fetches the profile from the API (OAuth 2.0), and normalises the result.
  */
 export async function completeAuthorization(
   p: ProviderDefinition,
@@ -100,8 +100,8 @@ export async function completeAuthorization(
 ): Promise<ProviderProfile> {
   const config = await getConfiguration(p);
 
-  // Hinter dem Ingress von Container Apps kommt die Anfrage intern per HTTP an.
-  // Für die Prüfung muss die URL der registrierten Redirect-URI entsprechen.
+  // Behind the Container Apps ingress the request arrives over plain HTTP.
+  // For the check, the URL has to match the registered redirect URI.
   const currentUrl = new URL(requestUrl.pathname + requestUrl.search, baseUrl());
 
   const tokens = await client.authorizationCodeGrant(config, currentUrl, {
@@ -116,18 +116,18 @@ export async function completeAuthorization(
   }
 
   const claims = tokens.claims();
-  if (!claims) throw new Error(`Provider ${p.id}: kein ID-Token erhalten`);
+  if (!claims) throw new Error(`Provider ${p.id}: no ID token received`);
   const c = claims as Record<string, unknown>;
 
   let subject = claims.sub;
   if (p.identity === 'entra-oid') {
-    // Entra: oid ist über alle Apps eines Tenants stabil, sub ist pro App paarweise.
-    if (typeof c.oid !== 'string') throw new Error(`Provider ${p.id}: oid-Claim fehlt`);
+    // Entra: oid is stable across all apps of a tenant, sub is pairwise per app.
+    if (typeof c.oid !== 'string') throw new Error(`Provider ${p.id}: oid claim missing`);
     subject = c.oid;
   }
 
   return {
-    // Bei Entra (common) ist claims.iss bereits die tenant-spezifische, validierte Issuer-URL.
+    // For Entra (common), claims.iss already is the tenant-specific, validated issuer URL.
     issuer: claims.iss,
     subject,
     displayName: (c.name as string | undefined) ?? (c.preferred_username as string | undefined),

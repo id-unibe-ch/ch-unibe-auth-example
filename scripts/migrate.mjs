@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Wendet die SQL-Migrationen aus db/migrations in Dateinamen-Reihenfolge an.
- * Bereits angewendete Migrationen stehen in dbo.schema_migrations.
+ * Applies the SQL migrations in db/migrations in file-name order.
+ * Migrations already applied are recorded in dbo.schema_migrations.
  *
- *   npm run db:migrate                 Migrationen anwenden
- *   npm run db:migrate -- --create-db  vorher die Datenbank anlegen (nur lokal/Docker)
+ *   npm run db:migrate                 apply the migrations
+ *   npm run db:migrate -- --create-db  create the database first (local/Docker only)
  *
- * Verbindung über dieselben Variablen wie die App (SQL_SERVER, SQL_DATABASE, SQL_AUTH, …).
+ * Connects with the same variables as the app (SQL_SERVER, SQL_DATABASE, SQL_AUTH, …).
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,7 +18,7 @@ const env = (name) => (process.env[name]?.trim() ? process.env[name].trim() : un
 const server = env('SQL_SERVER');
 const database = env('SQL_DATABASE');
 if (!server || !database) {
-  console.error('SQL_SERVER und SQL_DATABASE müssen gesetzt sein.');
+  console.error('SQL_SERVER and SQL_DATABASE have to be set.');
   process.exit(1);
 }
 
@@ -47,7 +47,7 @@ if (process.argv.includes('--create-db')) {
                 EXEC (@stmt);
               END`);
   await master.close();
-  console.log(`Datenbank ${database} bereit.`);
+  console.log(`Database ${database} ready.`);
 }
 
 const pool = await new sql.ConnectionPool(config(database)).connect();
@@ -81,5 +81,5 @@ for (const file of files) {
     process.exit(1);
   }
 }
-console.log(count ? `${count} Migration(en) angewendet.` : 'Datenbank ist aktuell.');
+console.log(count ? `${count} migration(s) applied.` : 'Database is up to date.');
 await pool.close();

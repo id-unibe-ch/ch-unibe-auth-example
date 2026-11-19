@@ -1,33 +1,33 @@
-# 05 – Offene Fragen
+# 05 – Open questions
 
-| # | Thema | Frage | Verantwortlich | Status |
+| # | Topic | Question | Owner | Status |
 |---|---|---|---|---|
-| 1 | AGOV | Zugang, Onboarding-Prozess und Vertrag mit dem Bund; welche Attribute und Vertrauensstufen (LoA) stehen zur Verfügung? Gibt es eine Testumgebung? | – | offen |
-| 2 | External ID | Welche Provider aktivieren wir im Directory `unibeeid` für die Demo (Google, E-Mail-OTP, Passkeys)? Apple und Facebook entfallen vorerst (kein Developer- bzw. Business-Account). | – | offen |
-| 3 | SWITCH | Bestehende OIDC-Anbindung wiederverwenden oder eigene Ressource registrieren? Welche Attribute werden freigegeben? Getrennte Buttons für edu-ID und SWITCHaai nötig? | – | offen |
-| 4 | GitHub | OAuth App oder GitHub App, unter welcher Organisation? | – | offen |
-| 5 | Entra UniBE | Soll die Profilansicht Rollen/Affiliations zeigen (Mitarbeitende vs. Studierende)? Falls ja: über welche Claims bzw. Gruppen? | – | offen |
-| 6 | Linking | Konflikt: Was passiert, wenn ein zu verbindender Account bereits zu einem anderen Benutzerkonto gehört? Vorschlag: ablehnen mit Hinweis, sich mit jenem Konto anzumelden und es zu löschen bzw. dort zu trennen. Alternative: geführte Kontozusammenführung mit Besitznachweis beider Konten. | – | Vorschlag «ablehnen» umgesetzt, zu bestätigen |
-| 7 | Linking | Sollen bei der Anmeldung mit einem neuen Provider Hinweise erscheinen («Haben Sie schon ein Konto? Dann melden Sie sich zuerst an und verbinden Sie diesen Account im Profil»)? | – | Hinweis auf Login-Seite umgesetzt, zu bestätigen |
-| 8 | Datenschutz | Welche Claims dürfen gespeichert werden; Aufbewahrungsdauer; automatische Löschung inaktiver Demo-Konten (z. B. nach 90 Tagen); Datenschutzhinweis auf der Seite. | – | offen |
-| 9 | Zielgruppe | Ist die Seite öffentlich (jede:r kann sich anmelden) oder nur intern erreichbar? | – | offen |
-| 10 | Sprache | Nur Deutsch oder auch Englisch (i18n)? | – | offen |
-| 11 | Apple/Meta | Wer könnte einen Apple-Developer- bzw. Meta-Business-Account für die UniBE beantragen, falls diese Methoden später gezeigt werden sollen? | – | offen |
+| 1 | AGOV | Access, onboarding process and agreement with the federal administration; which attributes and levels of assurance are available? Is there a test environment? | – | open |
+| 2 | External ID | Which providers do we enable in the `unibeeid` directory for the demo (Google, email one-time passcode, passkeys)? Apple and Facebook are out for now (no Developer or Business account). | – | open |
+| 3 | SWITCH | Reuse the existing OIDC connection or register a resource of our own? Which attributes are released? Separate buttons for edu-ID and SWITCHaai? | – | open |
+| 4 | GitHub | OAuth App or GitHub App, under which organisation? | – | open |
+| 5 | Entra UniBE | Should the profile show roles or affiliations (staff vs. students)? If so, from which claims or groups? | – | open |
+| 6 | Linking | Conflict: what happens when the account being linked already belongs to another user account? Proposal: refuse, and tell the user to sign in with that account and delete it or unlink it there. Alternative: a guided merge with proof of ownership of both accounts. | – | "refuse" implemented, to be confirmed |
+| 7 | Linking | Should signing in with a new provider show a hint ("Already have an account? Sign in first and link this account in your profile")? | – | hint on the sign-in page implemented, to be confirmed |
+| 8 | Data protection | Which claims may be stored; retention period; automatic deletion of inactive demo accounts (e.g. after 90 days); privacy notice on the site. | – | open |
+| 9 | Audience | Is the site public (anyone can sign in) or reachable internally only? | – | open |
+| 10 | Language | Is the user interface German only, or bilingual German/English (i18n)? | – | open |
+| 11 | Apple/Meta | Who could apply for an Apple Developer or Meta Business account for UniBE, should these methods be shown later? | – | open |
 
-## Erledigt
+## Resolved
 
-| Thema | Ergebnis |
+| Topic | Outcome |
 |---|---|
-| eduGAIN | Nicht nötig, über SWITCHaai/OIDC abgedeckt ([ADR-007](02-decisions.md)) |
-| Automatischer Merge | Entfällt, nur manuelles Verknüpfen ([ADR-005](02-decisions.md)) |
-| Microsoft-Tenants | Alle Tenants plus persönliche Konten ([ADR-006](02-decisions.md)) |
-| Zusätzliche IdPs | ORCID und Apple aufgenommen (Apple zurückgestellt), Passkeys werden umgesetzt ([ADR-008](02-decisions.md), [ADR-009](02-decisions.md)) |
-| Direkt vs. Broker | Beide Wege werden gezeigt ([ADR-003](02-decisions.md)) |
-| External ID | Directory `unibeeid.onmicrosoft.com` (`a791c572-76d6-4480-83df-b81dcdb92f69`), App-Registrierungen erlaubt |
-| Apple | Zurückgestellt – kein Apple-Developer-Account ([ADR-008](02-decisions.md)) |
-| Meta | Zurückgestellt – kein Meta-Business-Account ([ADR-012](02-decisions.md)) |
+| eduGAIN | Not needed, covered by SWITCHaai/OIDC ([ADR-007](02-decisions.md)) |
+| Automatic merge | Dropped, manual linking only ([ADR-005](02-decisions.md)) |
+| Microsoft tenants | All tenants plus personal accounts ([ADR-006](02-decisions.md)) |
+| Additional IdPs | ORCID and Apple added (Apple deferred), passkeys to be implemented ([ADR-008](02-decisions.md), [ADR-009](02-decisions.md)) |
+| Direct vs. broker | Both paths are shown ([ADR-003](02-decisions.md)) |
+| External ID | Directory `unibeeid.onmicrosoft.com` (`a791c572-76d6-4480-83df-b81dcdb92f69`), app registrations allowed |
+| Apple | Deferred – no Apple Developer account ([ADR-008](02-decisions.md)) |
+| Meta | Deferred – no Meta Business account ([ADR-012](02-decisions.md)) |
 | Domain | `login-example.campus.cloud` ([ADR-013](02-decisions.md)) |
-| Hosting/Kosten | Container Apps immer an + Azure SQL Basic, ca. CHF 10/Monat ([ADR-011](02-decisions.md)) |
-| Datenzugriff | `mssql` mit SQL-Migrationen, ohne ORM ([ADR-014](02-decisions.md)) |
-| Infrastructure as Code | Bicep ([08](08-deployment.md)) |
-| CI/CD | GitHub Actions mit OIDC-Federation, Image in GHCR, Key Vault aus GitHub-Secrets ([08](08-deployment.md)) |
+| Hosting and costs | Container Apps always on + Azure SQL Basic, about CHF 10/month ([ADR-011](02-decisions.md)) |
+| Data access | `mssql` with SQL migrations, no ORM ([ADR-014](02-decisions.md)) |
+| Infrastructure and CI/CD | Bicep, GitHub Actions with OIDC federation, image in GHCR, Key Vault filled from GitHub secrets ([ADR-015](02-decisions.md), [08](08-deployment.md)) |
+| Repository language | English throughout, UI German for now ([ADR-016](02-decisions.md)) |

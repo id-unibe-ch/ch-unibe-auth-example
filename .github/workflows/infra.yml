@@ -1,27 +1,27 @@
 name: Infrastructure (Bicep)
 
-# infra/main.bicep. Bewusst manuell: Infrastruktur ändert sich nicht mit jedem Commit.
-# Zuerst what-if ausführen und das Ergebnis lesen. Ablauf: docs/08-deployment.md
+# infra/main.bicep. Deliberately manual: infrastructure does not change with every commit.
+# Run what-if first and read it. Procedure: docs/08-deployment.md
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'what-if zeigt die Änderungen, ohne sie anzuwenden; deploy wendet sie an.'
+        description: 'what-if shows the changes without applying them; deploy applies them.'
         type: choice
         options: [what-if, deploy]
         default: what-if
       deploy_app:
-        description: 'Container App und Migrations-Job bereitstellen. Erst wenn die Secrets im Key Vault vorhanden sind (Phase 2).'
+        description: 'Deploy the Container App and the migration job. Only once the secrets exist in the Key Vault (phase 2).'
         type: boolean
         default: true
       custom_domain_mode:
-        description: 'Eigene Domain: none → validate (nach den DNS-Einträgen) → bind'
+        description: 'Custom domain: none → validate (after the DNS records) → bind'
         type: choice
         options: [none, validate, bind]
         default: bind
 
 permissions:
-  id-token: write # OIDC-Federation, kein Azure-Secret in GitHub
+  id-token: write # OIDC federation, no Azure secret in GitHub
   contents: read
 
 jobs:
@@ -30,37 +30,37 @@ jobs:
     name: ${{ inputs.mode }}
     if: github.ref == 'refs/heads/main'
     env:
-      # Gelesen von infra/main.bicepparam.
+      # Read by infra/main.bicepparam.
       DEPLOY_APP: ${{ inputs.deploy_app }}
       CUSTOM_DOMAIN_MODE: ${{ inputs.custom_domain_mode }}
       SQL_ADMIN_GROUP_NAME: ${{ vars.SQL_ADMIN_GROUP_NAME }}
       SQL_ADMIN_GROUP_OBJECT_ID: ${{ vars.SQL_ADMIN_GROUP_OBJECT_ID }}
       DEPLOYER_PRINCIPAL_ID: ${{ vars.DEPLOYER_PRINCIPAL_ID }}
-      # Eine Tenant-Policy verbietet Service Principals das Zuweisen von Rollen. Die Rollen in
-      # infra/main.bicep legt eine Person beim ersten Deployment an (docs/08-deployment.md).
-      # Die Workflow-Identität hat Unibe-Application-Owner (mg-unibe) auf der Ressourcengruppe.
+      # A tenant policy keeps service principals from assigning roles. The roles in
+      # infra/main.bicep are created by a person on the first deployment (docs/08-deployment.md).
+      # The workflow identity holds Unibe-Application-Owner (mg-unibe) on the resource group.
       ASSIGN_ROLES: 'false'
       RG: ${{ vars.RESOURCE_GROUP }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Bei Azure anmelden
+      - name: Sign in to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.ENTRA_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Laufendes Image ermitteln
-        # Damit ein Infrastruktur-Deployment die App nicht auf «latest» bzw. eine ältere Version zurücksetzt.
+      - name: Find the running image
+        # So an infrastructure deployment does not reset the app to "latest" or an older version.
         run: |
           az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
           image=$(az containerapp show -g "$RG" -n ca-authex --query 'properties.template.containers[0].image' -o tsv 2>/dev/null || true)
           if [ -n "$image" ]; then
             echo "CONTAINER_IMAGE=$image" >> "$GITHUB_ENV"
-            echo "Laufendes Image: $image"
+            echo "Running image: $image"
           else
-            echo "Noch keine Container App – Standard-Image aus main.bicepparam."
+            echo "No Container App yet – using the default image from main.bicepparam."
           fi
 
       - name: What-if

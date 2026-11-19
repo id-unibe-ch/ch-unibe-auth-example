@@ -1,14 +1,14 @@
--- Datenbankbenutzer für die Managed Identities anlegen.
--- Ausführen in der Datenbank sqldb-authex, angemeldet als Mitglied der SQL-Administratorgruppe (Entra).
--- Namen gemäss Bicep-Ausgaben appIdentityName / migrationIdentityName.
+-- Creates the database users for the managed identities.
+-- Run in the database sqldb-authex, signed in as a member of the SQL administrator group (Entra).
+-- Names as in the Bicep outputs appIdentityName / migrationIdentityName.
 
--- App: nur Daten lesen und schreiben
+-- App: read and write data only
 IF DATABASE_PRINCIPAL_ID('id-authex-app') IS NULL
     CREATE USER [id-authex-app] FROM EXTERNAL PROVIDER;
 ALTER ROLE db_datareader ADD MEMBER [id-authex-app];
 ALTER ROLE db_datawriter ADD MEMBER [id-authex-app];
 
--- Migration: Schema ändern
+-- Migration: change the schema
 IF DATABASE_PRINCIPAL_ID('id-authex-migrate') IS NULL
     CREATE USER [id-authex-migrate] FROM EXTERNAL PROVIDER;
 ALTER ROLE db_ddladmin ADD MEMBER [id-authex-migrate];

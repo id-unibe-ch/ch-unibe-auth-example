@@ -1,36 +1,36 @@
-// Parameter für infra/main.bicep.
+// Parameters for infra/main.bicep.
 //
-// Werte, die pro Umgebung verschieden sind oder nicht ins Repository gehören, kommen aus
-// Umgebungsvariablen. .github/workflows/infra.yml füllt sie aus den gleichnamigen Repository-Variablen.
-// Bei einem Deployment von Hand dieselben Variablen in der Shell setzen. Nichts hier ist geheim.
+// What differs per environment or does not belong in the repository comes from environment
+// variables. .github/workflows/infra.yml fills them from the repository variables of the same name.
+// For a deployment by hand, set the same variables in the shell. Nothing here is a secret.
 using './main.bicep'
 
 param namePrefix = 'authex'
 param location = 'switzerlandnorth'
 
-// Phase 1: false · Phase 2 (nach dem Setzen der Secrets): true
+// Phase 1: false · phase 2 (after the secrets are set): true
 param deployApp = bool(readEnvironmentVariable('DEPLOY_APP', 'false'))
 
-// Der Workflow setzt das aktuell laufende Image ein, damit ein Infrastruktur-Deployment keine Version zurückdreht.
+// The workflow passes the image currently running, so an infrastructure deployment does not roll back a version.
 param containerImage = readEnvironmentVariable('CONTAINER_IMAGE', 'ghcr.io/id-unibe-ch/ch-unibe-auth-example:latest')
 
-// Entra-Gruppe als SQL-Administrator (Anzeigename und Objekt-ID aus dem UniBE-Tenant)
+// Entra group as SQL administrator (display name and object id from the UniBE tenant)
 param sqlAdminGroupName = readEnvironmentVariable('SQL_ADMIN_GROUP_NAME')
 param sqlAdminGroupObjectId = readEnvironmentVariable('SQL_ADMIN_GROUP_OBJECT_ID')
 
-// Service Principal der GitHub-Workflows: darf Secrets im Key Vault setzen.
+// Service principal of the GitHub workflows: may set Key Vault secrets.
 param secretsOfficerPrincipalId = readEnvironmentVariable('DEPLOYER_PRINCIPAL_ID', '')
 param secretsOfficerPrincipalType = 'ServicePrincipal'
 
-// Der Workflow setzt ASSIGN_ROLES=false (Tenant-Policy). Eine Person lässt die Variable beim ersten Deployment weg.
+// The workflow sets ASSIGN_ROLES=false (tenant policy). A person leaves it unset on the first deployment.
 param assignRoles = bool(readEnvironmentVariable('ASSIGN_ROLES', 'true'))
 
 param customDomain = 'login-example.campus.cloud'
-// none → validate (nach den DNS-Einträgen) → bind
+// none → validate (after the DNS records) → bind
 param customDomainMode = readEnvironmentVariable('CUSTOM_DOMAIN_MODE', 'none')
 
-// Anmeldemethoden: Client-ID hier, Client Secret im Key Vault unter secretName.
-// Die Secrets füllt .github/workflows/secrets.yml aus den GitHub-Secrets.
+// Sign-in methods: the client id here, the client secret in the Key Vault under secretName.
+// .github/workflows/secrets.yml fills the secrets from the GitHub secrets.
 param identityProviders = [
   {
     envPrefix: 'ENTRA_UNIBE'
@@ -47,7 +47,7 @@ param identityProviders = [
     clientId: '20bf5a5b-79a0-40e2-abcb-828224942804'
     secretName: 'external-id-client-secret'
   }
-  // Weitere Anbieter nach der Registrierung ergänzen (Secret vorher im Key Vault setzen), z. B.:
+  // Add further providers after registering them (set the secret in the Key Vault first), e.g.:
   // { envPrefix: 'SWITCH', clientId: '…', secretName: 'switch-client-secret' }
   // { envPrefix: 'ORCID',  clientId: '…', secretName: 'orcid-client-secret' }
   // { envPrefix: 'GOOGLE', clientId: '…', secretName: 'google-client-secret' }

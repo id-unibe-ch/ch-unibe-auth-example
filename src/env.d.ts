@@ -4,11 +4,11 @@ declare namespace App {
   }
   interface SessionData {
     userId: string;
-    /** Zeitpunkt der letzten erfolgreichen Anmeldung (ms), für Re-Auth vor sensiblen Aktionen. */
+    /** Time of the last successful sign-in (ms), for re-authentication before sensitive actions. */
     lastAuthAt: number;
-    /** Laufende Anmelde- bzw. Verknüpfungstransaktion. */
+    /** The sign-in or linking transaction in progress. */
     authTx: import('./lib/auth').AuthTransaction;
-    /** Einmalige Meldung für die nächste Seite. */
+    /** A one-time message for the next page (UI text, German). */
     flash: { kind: 'success' | 'info' | 'error'; message: string };
   }
 }
