@@ -54,6 +54,22 @@ The app runs at http://localhost:4321. The redirect URI per provider (enter it i
 | GitHub | `github` |
 | AGOV (access open) | `agov` |
 
+### HTTPS locally
+
+Some providers accept `https` redirect URIs only (SWITCH edu-ID, ORCID). The dev server switches to HTTPS by itself as soon as a certificate exists in `.certs/` (ignored by git). With [mkcert](https://github.com/FiloSottile/mkcert), a locally trusted certificate takes two commands:
+
+```bash
+mkcert -install
+```
+
+```bash
+mkdir -p .certs && mkcert -key-file .certs/localhost-key.pem -cert-file .certs/localhost.pem localhost 127.0.0.1 ::1
+```
+
+Then set `APP_BASE_URL=https://localhost:4321` in `.env` and restart `npm run dev`. The redirect URIs become `https://localhost:4321/auth/{provider}/callback` – add that form to every app registration you test locally with. To go back to HTTP, delete `.certs/` and reset `APP_BASE_URL`.
+
+Under WSL with the browser on Windows, the browser does not see the Linux trust store: run `mkcert -install` on Windows too, or import the root certificate from `mkcert -CAROOT` there.
+
 Testing without a real registration: start a mock OIDC server on `http://localhost` and point `ORCID_ISSUER` at it. HTTP issuers on `localhost` are allowed in dev mode only.
 
 ## Checks
