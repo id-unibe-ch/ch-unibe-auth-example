@@ -55,15 +55,15 @@ the GitHub workflow therefore sets false; a person creates the roles on the firs
 param assignRoles bool = true
 
 @description('Object id of the principal allowed to set Key Vault secrets – typically the service principal of the GitHub workflows (empty = no assignment).')
-param secretsOfficerPrincipalId string = ''
+param keyVaultWriterPrincipalId string = ''
 
-@description('Type of the secrets officer principal.')
+@description('Type of the Key Vault writer principal.')
 @allowed([
   'ServicePrincipal'
   'User'
   'Group'
 ])
-param secretsOfficerPrincipalType string = 'ServicePrincipal'
+param keyVaultWriterPrincipalType string = 'ServicePrincipal'
 
 @description('Custom domain of the app (empty = *.azurecontainerapps.io only).')
 param customDomain string = 'login-example.campus.cloud'
@@ -181,13 +181,13 @@ resource appSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = i
   }
 }
 
-resource secretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (assignRoles && !empty(secretsOfficerPrincipalId)) {
+resource keyVaultWriter 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (assignRoles && !empty(keyVaultWriterPrincipalId)) {
   scope: keyVault
-  name: guid(keyVault.id, secretsOfficerPrincipalId, roleKeyVaultSecretsOfficer)
+  name: guid(keyVault.id, keyVaultWriterPrincipalId, roleKeyVaultSecretsOfficer)
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleKeyVaultSecretsOfficer)
-    principalId: secretsOfficerPrincipalId
-    principalType: secretsOfficerPrincipalType
+    principalId: keyVaultWriterPrincipalId
+    principalType: keyVaultWriterPrincipalType
   }
 }
 
@@ -305,12 +305,17 @@ var providerSecrets = [
   }
 ]
 
-var providerEnv = flatten([
-  for p in identityProviders: [
-    { name: '${p.envPrefix}_CLIENT_ID', value: p.clientId }
-    { name: '${p.envPrefix}_CLIENT_SECRET', secretRef: toLower(replace('${p.envPrefix}-client-secret', '_', '-')) }
-  ]
-])
+// Two loops and a concat: a for-expression may not stand inside a function call such as flatten() (BCP138).
+var providerIdEnv = [
+  for p in identityProviders: { name: '${p.envPrefix}_CLIENT_ID', value: p.clientId }
+]
+var providerSecretEnv = [
+  for p in identityProviders: {
+    name: '${p.envPrefix}_CLIENT_SECRET'
+    secretRef: toLower(replace('${p.envPrefix}-client-secret', '_', '-'))
+  }
+]
+var providerEnv = concat(providerIdEnv, providerSecretEnv)
 
 var registrySecrets = useRegistry ? [{ name: 'registry-password', value: registryPassword }] : []
 var registries = useRegistry

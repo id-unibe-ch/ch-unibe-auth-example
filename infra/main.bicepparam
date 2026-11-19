@@ -19,8 +19,8 @@ param sqlAdminGroupName = readEnvironmentVariable('SQL_ADMIN_GROUP_NAME')
 param sqlAdminGroupObjectId = readEnvironmentVariable('SQL_ADMIN_GROUP_OBJECT_ID')
 
 // Service principal of the GitHub workflows: may set Key Vault secrets.
-param secretsOfficerPrincipalId = readEnvironmentVariable('DEPLOYER_PRINCIPAL_ID', '')
-param secretsOfficerPrincipalType = 'ServicePrincipal'
+param keyVaultWriterPrincipalId = readEnvironmentVariable('DEPLOYER_PRINCIPAL_ID', '')
+param keyVaultWriterPrincipalType = 'ServicePrincipal'
 
 // The workflow sets ASSIGN_ROLES=false (tenant policy). A person leaves it unset on the first deployment.
 param assignRoles = bool(readEnvironmentVariable('ASSIGN_ROLES', 'true'))
