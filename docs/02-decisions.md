@@ -81,6 +81,16 @@ When a decision changes, add a new entry and mark the superseded one rather than
 - **Decision:** Container Apps (Consumption) in Switzerland North with one instance always running (no scale to zero); Azure SQL Database Basic (no auto-pause); secrets in Key Vault.
 - **Consequence:** about CHF 10 a month instead of about CHF 0–2 with scale to zero.
 
+## ADR-018: Azure SQL in Sweden Central
+
+- **Status:** accepted
+- **Context:** The first deployment failed with `RegionDoesNotAllowProvisioning`: Switzerland North accepts no new Azure SQL servers at the moment.
+- **Decision:** SQL server and database go to **Sweden Central** (parameter `sqlLocation`); everything else stays in Switzerland North. Supersedes the SQL part of [ADR-011](#adr-011-hosting-on-azure-container-apps-always-on-data-in-azure-sql-basic).
+- **Consequences:**
+  - User accounts, linked identities (with the stored claims), passkeys' public keys and sessions are stored in the EU, not in Switzerland. Acceptable for a demo site; to be noted in the privacy statement ([open question 8](05-open-questions.md)).
+  - Each query crosses from Switzerland North to Sweden Central (a few tens of milliseconds); the app makes only a handful per request.
+  - Moving back once Switzerland North accepts new servers again means a new server and a data copy; the parameter makes the template ready for it.
+
 ## ADR-012: Meta deferred
 
 - **Status:** accepted

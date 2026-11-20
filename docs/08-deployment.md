@@ -13,10 +13,10 @@ Infrastructure as code in [`infra/main.bicep`](../infra/main.bicep), parameters 
 | Managed identity | `id-authex-app` | App: read Key Vault secrets, read/write data |
 | Managed identity | `id-authex-migrate` | Migration: change the schema |
 | Key Vault | `kv-authex-…` | The providers' client secrets (RBAC, purge protection) |
-| SQL server | `sql-authex-…` | Entra sign-in only, administrator = an Entra group |
-| SQL database | `sqldb-authex` | Basic, 2 GB |
+| SQL server | `sql-authex-…` | Entra sign-in only, administrator = an Entra group; **Sweden Central** ([ADR-018](02-decisions.md)) |
+| SQL database | `sqldb-authex` | Basic, 2 GB; Sweden Central |
 
-The `…` suffixes are derived from the resource group and are stable.
+The `…` suffixes are derived from the resource group and are stable. All resources are in Switzerland North except SQL server and database (`sqlLocation`).
 
 ## Workflows
 

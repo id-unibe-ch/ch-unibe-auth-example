@@ -26,7 +26,7 @@
 | Apple | Deferred – no Apple Developer account ([ADR-008](02-decisions.md)) |
 | Meta | Deferred – no Meta Business account ([ADR-012](02-decisions.md)) |
 | Domain | `login-example.campus.cloud` ([ADR-013](02-decisions.md)) |
-| Hosting and costs | Container Apps always on + Azure SQL Basic, about CHF 10/month ([ADR-011](02-decisions.md)) |
+| Hosting and costs | Container Apps always on + Azure SQL Basic, about CHF 10/month ([ADR-011](02-decisions.md)); SQL in Sweden Central ([ADR-018](02-decisions.md)) |
 | Data access | `mssql` with SQL migrations, no ORM ([ADR-014](02-decisions.md)) |
 | Infrastructure and CI/CD | Bicep, GitHub Actions with OIDC federation, image in GHCR, Key Vault filled from GitHub secrets ([ADR-015](02-decisions.md), [08](08-deployment.md)) |
 | Repository language | English throughout ([ADR-016](02-decisions.md)) |

@@ -7,6 +7,8 @@ using './main.bicep'
 
 param namePrefix = 'authex'
 param location = 'switzerlandnorth'
+// Switzerland North accepts no new Azure SQL servers at the moment (ADR-018).
+param sqlLocation = 'swedencentral'
 
 // Phase 1: false · phase 2 (after the secrets are set): true
 param deployApp = bool(readEnvironmentVariable('DEPLOY_APP', 'false'))
