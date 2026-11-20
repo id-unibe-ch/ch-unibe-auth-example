@@ -24,7 +24,7 @@ The `…` suffixes are derived from the resource group and are stable. All resou
 |---|---|---|
 | [`ci.yml`](../.github/workflows/ci.yml) | pull request, push to `main` | Type-check, build, compile and lint the Bicep template |
 | [`deploy.yml`](../.github/workflows/deploy.yml) | push to `main`, manual | Build the image → GHCR, run the migration job with the new image, update the app |
-| [`infra.yml`](../.github/workflows/infra.yml) | manual | Bicep `what-if` or `deploy`; keeps the running image |
+| [`infra.yml`](../.github/workflows/infra.yml) | manual | Bicep `what-if` or `deploy`; keeps the running image and, with `custom_domain_mode = auto`, the custom domain's state |
 | [`secrets.yml`](../.github/workflows/secrets.yml) | manual | GitHub secrets → Key Vault (with expiry date and content type), restart the app |
 
 Every Azure workflow signs in with **OIDC federation** – there is no Azure secret in GitHub.
@@ -110,7 +110,7 @@ After the first push, check that the package `ghcr.io/id-unibe-ch/ch-unibe-auth-
 
 ### 8. Deploy the app (phase 2)
 
-Run **Infrastructure (Bicep)** with `mode = what-if`, `deploy_app = true`, `custom_domain_mode = none`, check the result, then run it with `mode = deploy`.
+Run **Infrastructure (Bicep)** with `mode = what-if`, `deploy_app = true`, `custom_domain_mode = auto`, check the result, then run it with `mode = deploy`. Without a custom domain yet, `auto` resolves to `none`; the step "Resolve the custom domain mode" logs what it chose.
 
 ### 9. First release
 
@@ -121,15 +121,20 @@ Start `deploy.yml` by hand: the migration job runs with the current image, then 
 1. DNS records in the `campus.cloud` zone:
    - `CNAME login-example` → `<appDefaultHostname>`
    - `TXT asuid.login-example` → `<customDomainVerificationId>`
-2. `infra.yml` with `custom_domain_mode = validate` (hostname without certificate, the managed certificate is issued – takes a few minutes).
-3. `infra.yml` with `custom_domain_mode = bind`. `APP_BASE_URL` then points at `https://login-example.campus.cloud`.
+2. `infra.yml` with `custom_domain_mode = validate` – the one run that needs an explicit choice. It adds the hostname without a certificate, and the managed certificate is issued (a few minutes).
+3. `infra.yml` with `custom_domain_mode = auto` (or `bind`). Once the certificate exists, `auto` binds it. `APP_BASE_URL` then points at `https://login-example.campus.cloud`.
 
 The redirect URIs of the app registrations ([07](07-app-registrations.md)) have to match the active base URL. Before step 10, either add `https://<appDefaultHostname>/auth/{provider}/callback` temporarily or test only afterwards.
 
 ## Operations
 
 - **New version:** merge or push to `main` – `deploy.yml` migrates and rolls out.
-- **Infrastructure change:** `infra.yml`, always `what-if` first. The running image is kept. The inputs' defaults (`deploy_app = true`, `custom_domain_mode = bind`) are the final state.
+- **Infrastructure change:** `infra.yml`, always `what-if` first. The running image is kept. Leave `custom_domain_mode = auto`: it reads the current state and keeps it –
+  - hostname bound with the certificate, or certificate issued → `bind`
+  - hostname added, certificate still being issued → `validate`
+  - otherwise → `none`
+
+  So a routine run can neither remove the custom domain nor fail on a certificate that does not exist yet. `none`, `validate` and `bind` remain available to change the state on purpose.
 - **New provider:** add the GitHub secret → `secrets.yml` → entry in `identityProviders` (`infra/main.bicepparam`) → `infra.yml`.
 - **Renewed secret:** update the GitHub secret → `secrets.yml` (restarts the app).
 - **New role assignment needed:** have a person deploy (`ASSIGN_ROLES` unset).

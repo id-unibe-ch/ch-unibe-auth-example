@@ -15,10 +15,10 @@ on:
         type: boolean
         default: true
       custom_domain_mode:
-        description: 'Custom domain: none → validate (after the DNS records) → bind'
+        description: 'Custom domain: auto keeps the current state (bind once the certificate exists, else none). validate only once, after the DNS records.'
         type: choice
-        options: [none, validate, bind]
-        default: bind
+        options: [auto, none, validate, bind]
+        default: auto
 
 permissions:
   id-token: write # OIDC federation, no Azure secret in GitHub
@@ -33,6 +33,7 @@ jobs:
       # Read by infra/main.bicepparam.
       DEPLOY_APP: ${{ inputs.deploy_app }}
       CUSTOM_DOMAIN_MODE: ${{ inputs.custom_domain_mode }}
+      CUSTOM_DOMAIN: login-example.campus.cloud
       SQL_ADMIN_GROUP_NAME: ${{ vars.SQL_ADMIN_GROUP_NAME }}
       SQL_ADMIN_GROUP_OBJECT_ID: ${{ vars.SQL_ADMIN_GROUP_OBJECT_ID }}
       DEPLOYER_PRINCIPAL_ID: ${{ vars.DEPLOYER_PRINCIPAL_ID }}
@@ -50,6 +51,30 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.ENTRA_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve the custom domain mode
+        if: inputs.custom_domain_mode == 'auto'
+        # auto = keep what is there, so a routine run can neither remove the domain nor fail on a
+        # missing certificate:
+        #   hostname bound with the certificate, or certificate issued → bind
+        #   hostname added, certificate still being issued            → validate
+        #   otherwise (no app, no hostname)                           → none
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
+          cert="cert-${CUSTOM_DOMAIN//./-}"
+          binding=$(az containerapp show -g "$RG" -n ca-authex \
+            --query "properties.configuration.ingress.customDomains[?name=='$CUSTOM_DOMAIN'].bindingType | [0]" -o tsv 2>/dev/null || true)
+          issued=$(az containerapp env certificate list -g "$RG" -n cae-authex \
+            --query "length([?name=='$cert' && properties.provisioningState=='Succeeded'])" -o tsv 2>/dev/null || true)
+          if [ "$binding" = "SniEnabled" ] || [ "${issued:-0}" -gt 0 ]; then
+            mode=bind
+          elif [ "$binding" = "Disabled" ]; then
+            mode=validate
+          else
+            mode=none
+          fi
+          echo "Hostname binding: ${binding:-none} · certificate issued: ${issued:-0} → custom_domain_mode=$mode"
+          echo "CUSTOM_DOMAIN_MODE=$mode" >> "$GITHUB_ENV"
 
       - name: Find the running image
         # So an infrastructure deployment does not reset the app to "latest" or an older version.
