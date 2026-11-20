@@ -50,10 +50,22 @@ param identityProviders = [
     secretName: 'external-id-client-secret'
   }
   // Add further providers after registering them (set the secret in the Key Vault first), e.g.:
-  // { envPrefix: 'SWITCH', clientId: '…', secretName: 'switch-client-secret' }
+  { 
+    envPrefix: 'SWITCH'
+    clientId: 'unibe_auth_example_app'
+    secretName: 'switch-client-secret'
+  }
   // { envPrefix: 'ORCID',  clientId: '…', secretName: 'orcid-client-secret' }
-  // { envPrefix: 'GOOGLE', clientId: '…', secretName: 'google-client-secret' }
-  // { envPrefix: 'GITHUB', clientId: '…', secretName: 'github-client-secret' }
+  { 
+    envPrefix: 'GOOGLE'
+    clientId: '165663356444-j4c0jef5l0ef627jh0hsn9qu5qca1pe3.apps.googleusercontent.com'
+    secretName: 'google-client-secret'
+  }
+  { 
+    envPrefix: 'GITHUB'
+    clientId: 'Ov23li9Kdkaikl90Rdn2'
+    secretName: 'github-client-secret'
+  }
 ]
 
 param extraEnv = []

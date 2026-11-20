@@ -77,7 +77,7 @@ The workflow skips any secret that is not set.
 The role assignments (app identity → *Key Vault Secrets User*, workflow → *Key Vault Secrets Officer*) have to be created by a person. Locally, with the Azure CLI and Bicep:
 
 ```bash
-az bicep build --file infra/main.bicep
+az bicep build --file infra/main.bicep --stdout > /dev/null
 ```
 
 ```bash

@@ -9,3 +9,6 @@ dist/
 
 # Local HTTPS certificates (mkcert)
 .certs/
+
+# Bicep build output (generated from infra/main.bicep)
+infra/*.json
