@@ -27,8 +27,8 @@ param keyVaultWriterPrincipalType = 'ServicePrincipal'
 // The workflow sets ASSIGN_ROLES=false (tenant policy). A person leaves it unset on the first deployment.
 param assignRoles = bool(readEnvironmentVariable('ASSIGN_ROLES', 'true'))
 
-param customDomain = 'login-example.campus.cloud'
-// none → validate (after the DNS records) → bind
+param customDomain = readEnvironmentVariable('CUSTOM_DOMAIN', 'login-example.campus.cloud')
+// none → validate (after the DNS records) → bind; infra.yml resolves "auto" to one of them
 param customDomainMode = readEnvironmentVariable('CUSTOM_DOMAIN_MODE', 'none')
 
 // Sign-in methods: the client id here, the client secret in the Key Vault under secretName.
