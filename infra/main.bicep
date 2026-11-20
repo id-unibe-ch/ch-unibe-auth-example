@@ -108,7 +108,9 @@ var names = {
   appIdentity: 'id-${namePrefix}-app'
   migrationIdentity: 'id-${namePrefix}-migrate'
   keyVault: take('kv-${namePrefix}-${suffix}', 24)
-  sqlServer: 'sql-${namePrefix}-${suffix}'
+  // The location is part of the name: a server cannot move, and a failed attempt in one region keeps
+  // the name bound to it (InvalidResourceLocation). Another sqlLocation therefore means another server.
+  sqlServer: 'sql-${namePrefix}-${uniqueString(resourceGroup().id, sqlLocation)}'
   sqlDatabase: 'sqldb-${namePrefix}'
   certificate: 'cert-${replace(customDomain, '.', '-')}'
 }
