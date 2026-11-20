@@ -1,7 +1,7 @@
 // UniBE login example – Azure infrastructure
 // Architecture and costs: docs/06-hosting-and-data.md · Procedure: docs/08-deployment.md
 //
-// Resources (region Switzerland North):
+// Resources (region Switzerland North; SQL in Sweden Central, see sqlLocation):
 //   Log Analytics · Container Apps environment · Container App (always on) · Container Apps job (DB migration)
 //   2 user-assigned managed identities (app, migration) · Key Vault (RBAC) · Azure SQL server + DB (Basic)
 //
@@ -17,6 +17,10 @@ targetScope = 'resourceGroup'
 
 @description('Azure region of all resources.')
 param location string = 'switzerlandnorth'
+
+@description('''Azure region of the SQL server and database. Switzerland North accepts no new Azure SQL
+servers at the moment (RegionDoesNotAllowProvisioning), hence a region of its own (ADR-018).''')
+param sqlLocation string = 'swedencentral'
 
 @description('Short name for resource names (lower-case letters, digits, hyphen).')
 @maxLength(12)
@@ -197,7 +201,7 @@ resource keyVaultWriter 'Microsoft.Authorization/roleAssignments@2022-04-01' = i
 
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
   name: names.sqlServer
-  location: location
+  location: sqlLocation
   tags: tags
   properties: {
     minimalTlsVersion: '1.2'
@@ -228,7 +232,7 @@ resource sqlAllowAzure 'Microsoft.Sql/servers/firewallRules@2023-08-01' = {
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01' = {
   parent: sqlServer
   name: names.sqlDatabase
-  location: location
+  location: sqlLocation
   tags: tags
   sku: {
     name: 'Basic'

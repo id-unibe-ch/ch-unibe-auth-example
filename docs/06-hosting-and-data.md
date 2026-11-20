@@ -13,7 +13,7 @@ Requirement: hosted in Azure, as cheap as possible, without a wait on the first 
 | Secrets | **Azure Key Vault** (Standard) | Client secrets; access through managed identity | a few cents |
 | Images | **GitHub Container Registry** | public package; alternatively ACR Basic (≈ CHF 5) | 0 |
 | Logs | **Log Analytics** | 30 days' retention, daily cap 0.2 GB | small |
-| Region | **Switzerland North** | Data stays in Switzerland | – |
+| Region | **Switzerland North**; SQL in **Sweden Central** | Switzerland North accepts no new Azure SQL servers at the moment ([ADR-018](02-decisions.md)) | – |
 
 **Expected total: about CHF 9–17 a month**, realistically around CHF 10.
 
